@@ -81,23 +81,55 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          _buildCircleIcon(Icons.arrow_back_rounded),
           Text(
-            'ANÁLISIS',
+            'Sales Analytics',
             style: GoogleFonts.orbitron(
-              color: _limeNeon,
-              fontSize: 24,
+              color: Colors.white,
+              fontSize: 20,
               fontWeight: FontWeight.w900,
-              letterSpacing: 2.0,
-              shadows: [BoxShadow(color: _limeNeon.withOpacity(0.4), blurRadius: 12)]
+              letterSpacing: 1.0,
             ),
           ),
-          _buildExportButton(),
+          _buildNotificationIcon(),
         ],
       ),
+    );
+  }
+
+  Widget _buildCircleIcon(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _cardBg.withOpacity(0.5),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Icon(icon, color: Colors.white70, size: 20),
+    );
+  }
+
+  Widget _buildNotificationIcon() {
+    return Stack(
+      children: [
+        _buildCircleIcon(Icons.notifications_rounded),
+        Positioned(
+          right: 12,
+          top: 12,
+          child: Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(
+              color: _magentaNeon,
+              shape: BoxShape.circle,
+              border: Border.all(color: _darkBg, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -127,33 +159,35 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   Widget _buildTimeSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: _cardBg.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        color: _cardBg.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(6),
       child: Row(
-        children: ['DIARIO', 'SEMANAL', 'MENSUAL'].map((range) {
+        children: ['DAILY', 'WEEKLY', 'MONTHLY'].map((range) {
           final isActive = _timeRange == range;
           return Expanded(
             child: GestureDetector(
               onTap: () => _onTimeRangeChanged(range),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: isActive ? _limeNeon.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isActive ? _limeNeon : Colors.transparent),
+                  color: isActive ? _cyanNeon : Colors.transparent,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: isActive ? [
+                    BoxShadow(color: _cyanNeon.withOpacity(0.4), blurRadius: 15, spreadRadius: 1)
+                  ] : [],
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   range, 
                   style: GoogleFonts.spaceGrotesk(
                     fontWeight: FontWeight.w900, 
-                    fontSize: 11,
-                    color: isActive ? _limeNeon : Colors.white24,
-                    letterSpacing: 1.0
+                    fontSize: 12,
+                    color: isActive ? Colors.black : Colors.white38,
+                    letterSpacing: 1.2
                   )
                 ),
               ),
@@ -171,7 +205,7 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'FLUJO DE CAJA SEMANAL', 
+            'WEEKLY REVENUE', 
             style: GoogleFonts.spaceGrotesk(color: _cyanNeon, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w900)
           ),
           const SizedBox(height: 12),
@@ -180,14 +214,22 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
             children: [
               Text(
                 '\$42,500.00', 
-                style: GoogleFonts.orbitron(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)
+                style: GoogleFonts.orbitron(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.w900, 
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 20),
+                    Shadow(color: _cyanNeon.withOpacity(0.3), blurRadius: 40),
+                  ]
+                )
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05), 
-                  borderRadius: BorderRadius.circular(10), 
-                  border: Border.all(color: _limeNeon.withOpacity(0.3))
+                  color: const Color(0xFF1B3B2B).withOpacity(0.4), 
+                  borderRadius: BorderRadius.circular(12), 
+                  border: Border.all(color: _limeNeon.withOpacity(0.2))
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -200,37 +242,26 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
               )
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 38),
           SizedBox(
-            height: 120,
+            height: 100,
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceBetween,
                 maxY: 4000,
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) => _cardBg,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        '\$${rod.toY.toInt()}',
-                        GoogleFonts.spaceGrotesk(color: _cyanNeon, fontWeight: FontWeight.w900),
-                      );
-                    },
-                  ),
-                ),
+                barTouchData: BarTouchData(enabled: false),
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+                        const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10.0),
+                          padding: const EdgeInsets.only(top: 12.0),
                           child: Text(
                             days[value.toInt()],
-                            style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.w900),
                           ),
                         );
                       },
@@ -243,18 +274,19 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
                 barGroups: List.generate(7, (i) {
+                  final color = (i == 1 || i == 3 || i == 5) ? _magentaNeon : _cyanNeon;
                   return BarChartGroupData(
                     x: i,
                     barRods: [
                       BarChartRodData(
                         toY: _weeklyData[i]!,
-                        color: (i == 6 || i == 5) ? _limeNeon : _cyanNeon.withOpacity(0.5),
-                        width: 12,
-                        borderRadius: BorderRadius.circular(4),
+                        color: color,
+                        width: 14,
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: 4000,
-                          color: Colors.white.withOpacity(0.03),
+                          color: Colors.white.withOpacity(0.04),
                         ),
                       ),
                     ],
@@ -301,16 +333,22 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                     children: [
                       PieChart(
                         PieChartData(
-                          sectionsSpace: 4,
-                          centerSpaceRadius: 35,
+                          sectionsSpace: 6,
+                          centerSpaceRadius: 40,
                           sections: [
-                            PieChartSectionData(color: _cyanNeon, value: 60, title: '', radius: 10, showTitle: false),
-                            PieChartSectionData(color: _limeNeon, value: 25, title: '', radius: 10, showTitle: false),
-                            PieChartSectionData(color: _magentaNeon, value: 15, title: '', radius: 10, showTitle: false),
+                            PieChartSectionData(color: _cyanNeon, value: 60, title: '', radius: 14, showTitle: false),
+                            PieChartSectionData(color: _magentaNeon, value: 28, title: '', radius: 14, showTitle: false),
+                            PieChartSectionData(color: _limeNeon, value: 12, title: '', radius: 14, showTitle: false),
                           ],
                         ),
                       ),
-                      Text('74%', style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('74%', style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                          Text('GROWTH', style: GoogleFonts.spaceGrotesk(fontSize: 8, color: Colors.white38, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -319,11 +357,11 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
               Expanded(
                 child: Column(
                     children: [
-                      _buildLegendItem('ALIMENTOS', '60%', _cyanNeon),
-                      const SizedBox(height: 12),
-                      _buildLegendItem('BEBIDAS', '25%', _limeNeon),
-                      const SizedBox(height: 12),
-                      _buildLegendItem('OTROS', '15%', _magentaNeon),
+                      _buildLegendItem('Electronics', '60%', _cyanNeon),
+                      const SizedBox(height: 18),
+                      _buildLegendItem('Wearables', '28%', _magentaNeon),
+                      const SizedBox(height: 18),
+                      _buildLegendItem('Audio', '12%', _limeNeon),
                     ],
                 ),
               )
@@ -361,20 +399,26 @@ class KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF141714).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: const Color(0xFF141714).withOpacity(0.4),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.04)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.spaceGrotesk(color: color.withOpacity(0.7), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
-          const SizedBox(height: 8),
-          Text(value, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          Text(growth, style: GoogleFonts.spaceGrotesk(color: growth.contains('+') ? const Color(0xFF8CFF00) : const Color(0xFFFF2D55), fontSize: 10, fontWeight: FontWeight.w900)),
+          Text(title, style: GoogleFonts.spaceGrotesk(color: color, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 16),
+          Text(value, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          Text(
+            growth, 
+            style: GoogleFonts.spaceGrotesk(
+              color: growth.contains('+') ? const Color(0xFF8CFF00) : const Color(0xFFFF2D55), 
+              fontSize: 12, 
+              fontWeight: FontWeight.w900
+            )
+          ),
         ],
       ),
     );
