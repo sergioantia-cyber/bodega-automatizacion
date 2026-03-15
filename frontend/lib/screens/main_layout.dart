@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'dashboard.dart';
 import 'inventory_screen.dart';
 import 'stats_screen.dart';
+import 'user_profile_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -13,17 +15,22 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
-  int _currentIndex = 1; // Temporarily default to 1 (Stats) to show the new screen
+  int _currentIndex = 0;
   
   late AnimationController _pulseController;
   late AnimationController _menuController;
   bool _isMenuOpen = false;
 
+  final Color _darkBg = const Color(0xFF070907);
+  final Color _cardBg = const Color(0xFF141714);
+  final Color _limeNeon = const Color(0xFF8CFF00);
+  final Color _cyanNeon = const Color(0xFF00FBFF);
+
   final List<Widget> _screens = [
     const DashboardScreen(),
     const StatsScreen(),
     const InventoryScreen(),
-    const _PlaceholderScreen(title: 'Perfil y Ajustes (USER)'),
+    const UserProfileScreen(),
   ];
 
   @override
@@ -60,28 +67,14 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    const primaryNeon = Color(0xFF00E5FF);
-    const secondaryNeon = Color(0xFFFF00FF);
-    const tertiaryNeon = Color(0xFFCCFF00);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF060606),
+      backgroundColor: _darkBg,
       body: Stack(
         children: [
           IndexedStack(
             index: _currentIndex,
             children: _screens,
           ),
-
-          // 2. Overlay for FAB Menu
-          if (_isMenuOpen)
-            GestureDetector(
-              onTap: _toggleMenu,
-              child: Container(color: Colors.black87, width: double.infinity, height: double.infinity),
-            ),
-
-          // 3. Orbiting Icons from FAB
-          _buildOrbitingIcons(primaryNeon, secondaryNeon, tertiaryNeon),
 
           // 4. Tab Bar (Bottom Navigation)
           Align(
@@ -90,7 +83,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               height: 75,
               margin: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFF131313),
+                color: _cardBg.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(25),
                 border: Border.all(color: Colors.white.withOpacity(0.05)),
                 boxShadow: [
@@ -105,22 +98,41 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildTabItem(0, Icons.grid_view_rounded, 'DASH', primaryNeon),
-                  _buildTabItem(1, Icons.bar_chart_rounded, 'STATS', primaryNeon),
+                  _buildTabItem(0, Icons.grid_view_rounded, 'INICIO'),
+                  _buildTabItem(1, Icons.bar_chart_rounded, 'STATS'),
                   const SizedBox(width: 70), // Spacer for Central FAB
-                  _buildTabItem(2, Icons.assignment_turned_in_outlined, 'STOCK', primaryNeon),
-                  _buildTabItem(3, Icons.settings_outlined, 'USER', primaryNeon),
+                  _buildTabItem(2, Icons.inventory_2_rounded, 'STOCK'),
+                  _buildTabItem(3, Icons.person_outline_rounded, 'PERFIL'),
                 ],
               ),
             ),
           ),
+
+          // 2. Overlay for FAB Menu
+          if (_isMenuOpen || _menuController.isAnimating)
+            AnimatedBuilder(
+              animation: _menuController,
+              builder: (context, child) {
+                if (_menuController.value == 0) return const SizedBox.shrink();
+                return GestureDetector(
+                  onTap: _toggleMenu,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15 * _menuController.value, sigmaY: 15 * _menuController.value),
+                    child: Container(color: Colors.black.withOpacity(0.7 * _menuController.value), width: double.infinity, height: double.infinity),
+                  ),
+                );
+              },
+            ),
+
+          // 3. Floating Icons Menu
+          _buildFloatingMenu(),
 
           // 5. Central Pulsing FAB
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 35),
-              child: _buildCentralFab(primaryNeon),
+              child: _buildCentralFab(),
             ),
           ),
         ],
@@ -128,15 +140,15 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTabItem(int index, IconData icon, String label, Color accentColor) {
+  Widget _buildTabItem(int index, IconData icon, String label) {
     bool isSelected = _currentIndex == index;
-    Color color = isSelected ? accentColor : Colors.grey[600]!;
+    Color color = isSelected ? _limeNeon : Colors.white24;
     
     return GestureDetector(
       onTap: () {
         setState(() {
           _currentIndex = index;
-          if (_isMenuOpen) _toggleMenu(); // Close menu if we navigate
+          if (_isMenuOpen) _toggleMenu();
         });
       },
       behavior: HitTestBehavior.opaque,
@@ -151,7 +163,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
             style: GoogleFonts.spaceGrotesk(
               color: color, 
               fontSize: 10, 
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
               letterSpacing: 1.2
             )
           ),
@@ -160,79 +172,156 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildOrbitingIcons(Color blue, Color pink, Color green) {
+  Widget _buildFloatingMenu() {
     return AnimatedBuilder(
       animation: _menuController,
       builder: (context, child) {
         if (_menuController.value == 0) return const SizedBox.shrink();
-        final radius = 110 * _menuController.value;
+        
+        final val = Curves.easeOutBack.transform(_menuController.value);
+        final centerX = MediaQuery.of(context).size.width / 2;
+        // Central position slightly above the FAB
+        const centerY = 360.0;
+        const spread = 135.0;
+
+        // Angles for a symmetric 5-point radial layout (12, 2:30, 4:30, 7:30, 9:30 o'clock)
+        // Note: -math.pi/2 is Top (12 o'clock)
+        const double top = -math.pi / 2;
+        const double step = (2 * math.pi) / 5;
+
+        double bx(double angle) => centerX + math.cos(angle) * (spread * val);
+        double by(double angle) => centerY - math.sin(angle) * (spread * val);
+
         return Stack(
           alignment: Alignment.bottomCenter,
           children: [
-            _buildOrbitButton(radius, math.pi * 0.7, Icons.point_of_sale, blue, 'Nueva Venta', () { 
-              _toggleMenu(); 
-              Navigator.pushNamed(context, '/checkout'); 
-            }),
-            _buildOrbitButton(radius, math.pi * 0.5, Icons.trending_down, pink, 'Registrar Gasto', () { _toggleMenu(); }),
-            _buildOrbitButton(radius, math.pi * 0.3, Icons.qr_code_scanner, green, 'Consultar Prod', () { _toggleMenu(); }),
+            // Top: VENDER (Cyan)
+            _buildGlassBubble(
+              bx(top), by(top), 
+              Icons.shopping_cart_rounded, _cyanNeon, 'VENDER', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/checkout'); }
+            ),
+            // Top-Right: NUEVO PROD (Lime)
+            _buildGlassBubble(
+              bx(top + step), by(top + step), 
+              Icons.add_rounded, _limeNeon, 'NUEVO PROD', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/add_product'); }
+            ),
+            // Bottom-Right: GASTO (Pink)
+            _buildGlassBubble(
+              bx(top + 2 * step), by(top + 2 * step), 
+              Icons.description_rounded, const Color(0xFFFF2D55), 'GASTO', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/expense'); }
+            ),
+            // Bottom-Left: HISTORIAL (Purple)
+            _buildGlassBubble(
+              bx(top + 3 * step), by(top + 3 * step), 
+              Icons.history_rounded, const Color(0xFFB388FF), 'HISTORIAL', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/expense_history'); }
+            ),
+            // Top-Left: ESCANEAR (Yellow)
+            _buildGlassBubble(
+              bx(top + 4 * step), by(top + 4 * step), 
+              Icons.qr_code_scanner_rounded, const Color(0xFFFFD600), 'ESCANEAR', val, 
+              () { _toggleMenu(); } // Logic for scanner
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _buildOrbitButton(double radius, double angle, IconData icon, Color color, String label, VoidCallback onTap) {
-    final x = radius * math.cos(angle);
-    final y = -radius * math.sin(angle);
+  Widget _buildGlassBubble(double x, double y, IconData icon, Color color, String label, double scale, VoidCallback onTap) {
+    const double size = 68.0;
+    const double width = 120.0;
     return Positioned(
-      bottom: 105 + y, // Raised from 75 to 105 to ensure they are high above the edge
-      left: MediaQuery.of(context).size.width / 2 + x - 35,
-      child: Opacity(
-        opacity: _menuController.value,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Column(children: [
-            Container(
-              width: 50, height: 50, 
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A), 
-                shape: BoxShape.circle, 
-                border: Border.all(color: color, width: 2), 
-                boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 10)]
-              ), 
-              child: Icon(icon, color: color, size: 24)
+      left: x - (width / 2),
+      bottom: y - 50,
+      child: SizedBox(
+        width: width,
+        child: Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: _menuController.value.clamp(0.0, 1.0),
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: size, height: size,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: color.withOpacity(0.8), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.4), 
+                          blurRadius: 15, 
+                          spreadRadius: 1
+                        ),
+                        BoxShadow(
+                          color: color.withOpacity(0.2), 
+                          blurRadius: 30, 
+                          spreadRadius: 5
+                        ),
+                      ]
+                    ),
+                    child: Center(
+                      child: Icon(icon, color: color, size: 30),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    label, 
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.orbitron(
+                      color: Colors.white, 
+                      fontSize: 10, 
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      shadows: [
+                        const Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 2))
+                      ]
+                    )
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(label, style: GoogleFonts.spaceGrotesk(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-          ]),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCentralFab(Color blue) {
+  Widget _buildCentralFab() {
     return AnimatedBuilder(
-      animation: _pulseController,
+      animation: Listenable.merge([_pulseController, _menuController]),
       builder: (context, child) {
+        final currentColor = _isMenuOpen ? const Color(0xFFFF2D55) : _limeNeon;
+        final rotation = _menuController.value * math.pi / 4;
+
         return GestureDetector(
           onTap: _toggleMenu,
-          child: Container(
-            width: 75, height: 75,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F0F0F),
-              shape: BoxShape.circle,
-              border: Border.all(color: blue, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: blue.withOpacity(0.4 * _pulseController.value),
-                  blurRadius: 10 + (10 * _pulseController.value),
-                  spreadRadius: 2 * _pulseController.value,
-                ),
-                // Inner glow simulation by removing inset or using a border inside
-                // BoxShadow(color: blue.withOpacity(0.2), blurRadius: 10),
-              ]..removeWhere((e) => e.color.alpha == 0),
+          child: Transform.rotate(
+            angle: rotation,
+            child: Container(
+              width: 70, height: 70,
+              decoration: BoxDecoration(
+                color: _darkBg,
+                shape: BoxShape.circle,
+                border: Border.all(color: currentColor, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: currentColor.withOpacity(0.5 * _pulseController.value),
+                    blurRadius: 15 + (10 * _pulseController.value),
+                    spreadRadius: 2 * _pulseController.value,
+                  ),
+                ],
+              ),
+              child: Icon(_isMenuOpen ? Icons.close : Icons.add, color: currentColor, size: 36),
             ),
-            child: Icon(_isMenuOpen ? Icons.close : Icons.add, color: blue, size: 40),
           ),
         );
       },

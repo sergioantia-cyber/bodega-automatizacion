@@ -6,6 +6,10 @@ import 'screens/main_layout.dart';
 import 'screens/dashboard.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/checkout_screen.dart';
+import 'screens/expense_screen.dart';
+import 'screens/expense_history_screen.dart';
+import 'screens/add_product_screen.dart';
+import 'screens/close_shift_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +52,11 @@ class PosUrenaApp extends StatelessWidget {
         '/dashboard': (context) => const DashboardScreen(),
         '/inventory': (context) => const InventoryScreen(),
         '/checkout': (context) => const CheckoutScreen(),
-        // TODO: Agregar rutas de Caja/POS y Reportes
+        '/expense': (context) => const ExpenseScreen(),
+        '/expense_history': (context) => const ExpenseHistoryScreen(),
+        '/add_product': (context) => const AddProductScreen(),
+        '/close_shift': (context) => const CloseShiftScreen(),
+        // TODO: Agregar rutas de Reportes
       },
     );
   }

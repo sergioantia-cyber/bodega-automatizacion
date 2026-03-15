@@ -8,29 +8,36 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryNeon = Color(0xFF00E5FF);
-    const secondaryNeon = Color(0xFFFF00FF);
-    const tertiaryNeon = Color(0xFFCCFF00);
+    const darkBg = Color(0xFF070907);
+    const cardBg = Color(0xFF141714);
+    const limeNeon = Color(0xFF8CFF00);
+    const cyanNeon = Color(0xFF00FBFF);
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Background now managed by MainLayout
+      backgroundColor: Colors.transparent, // Background managed by MainLayout
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-               const SizedBox(height: 20),
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildSalesChart(primaryNeon),
-              const SizedBox(height: 24),
-              _buildQuickActions(context, primaryNeon, secondaryNeon),
-              const SizedBox(height: 24),
-              _buildInventoryMonitoring(context, tertiaryNeon, secondaryNeon),
-              const SizedBox(height: 24),
-              _buildRecentActivity(context, primaryNeon, secondaryNeon),
-              const SizedBox(height: 120), // Padding to account for the MainLayout Bottom Nav
+              const SizedBox(height: 20),
+              _buildHeader(limeNeon),
+              const SizedBox(height: 32),
+              _buildSalesChart(cyanNeon, limeNeon),
+              const SizedBox(height: 32),
+              _buildSectionTitle('ACCIONES RÁPIDAS'),
+              const SizedBox(height: 16),
+              _buildQuickActions(context, cyanNeon, limeNeon),
+              const SizedBox(height: 32),
+              _buildSectionTitle('MONITOREO DE STOCK'),
+              const SizedBox(height: 16),
+              _buildInventoryMonitoring(context, limeNeon, cyanNeon),
+              const SizedBox(height: 32),
+              _buildSectionTitle('ACTIVIDAD RECIENTE'),
+              const SizedBox(height: 16),
+              _buildRecentActivity(context, cyanNeon, limeNeon),
+              const SizedBox(height: 120), // Bottom nav padding
             ],
           ),
         ),
@@ -38,61 +45,100 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.orbitron(
+        color: Colors.white70,
+        fontSize: 10,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.5,
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color accent) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Bienvenido back,', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-            Text('POS Ureña Admin', style: GoogleFonts.spaceGrotesk(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text(
+              'BIENVENIDO BACK,', 
+              style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0)
+            ),
+            Text(
+              'POS UREÑA', 
+              style: GoogleFonts.orbitron(
+                fontSize: 26, 
+                fontWeight: FontWeight.w900, 
+                color: Colors.white,
+                letterSpacing: 1.0,
+                shadows: [BoxShadow(color: accent.withOpacity(0.3), blurRadius: 10)]
+              )
+            ),
           ],
         ),
         Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white12)),
-          child: const Icon(Icons.person_outline, color: Colors.white),
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF141714),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          child: Icon(Icons.person_rounded, color: accent, size: 24),
         ),
       ],
     );
   }
 
-  Widget _buildSalesChart(Color neonColor) {
+  Widget _buildSalesChart(Color primary, Color secondary) {
     return GlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Rendimiento Semanal', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('\$4,250.00', style: GoogleFonts.spaceGrotesk(color: neonColor, fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                'VENTAS HOY', 
+                style: GoogleFonts.spaceGrotesk(color: primary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)
+              ),
+              Text(
+                '+\$1,240.50', 
+                style: GoogleFonts.spaceGrotesk(color: secondary, fontWeight: FontWeight.w900, fontSize: 14)
+              ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
           SizedBox(
-            height: 150,
+            height: 140,
             child: LineChart(
               LineChartData(
                 gridData: const FlGridData(show: false),
                 titlesData: const FlTitlesData(show: false),
                 borderData: FlBorderData(show: false),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (spot) => Colors.black,
-                    getTooltipItems: (spots) => spots.map((s) => LineTooltipItem('\$${s.y}\n14 Mar', GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 10))).toList(),
-                  ),
-                ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: const [FlSpot(0, 1), FlSpot(1, 2), FlSpot(2, 1.5), FlSpot(3, 4), FlSpot(4, 2.5), FlSpot(5, 3)],
+                    spots: const [
+                      FlSpot(0, 1.2), FlSpot(1, 2.8), FlSpot(2, 2.1), 
+                      FlSpot(3, 4.5), FlSpot(4, 3.2), FlSpot(5, 5.0)
+                    ],
                     isCurved: true,
-                    color: neonColor,
+                    color: primary,
                     barWidth: 4,
                     dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(show: true, color: neonColor.withOpacity(0.2)),
+                    belowBarData: BarAreaData(
+                      show: true, 
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [primary.withOpacity(0.2), Colors.transparent],
+                      )
+                    ),
                   ),
                 ],
               ),
@@ -103,12 +149,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, Color primary, Color secondary) {
+  Widget _buildQuickActions(BuildContext context, Color cyan, Color lime) {
     return Row(
       children: [
-        Expanded(child: _buildActionButton('New Sale', Icons.shopping_bag_outlined, primary, () => Navigator.pushNamed(context, '/checkout'))),
+        Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
         const SizedBox(width: 16),
-        Expanded(child: _buildActionButton('Scan QR', Icons.qr_code_scanner, secondary, () {})),
+        Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
       ],
     );
   }
@@ -117,76 +163,129 @@ class DashboardScreen extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
+          color: const Color(0xFF141714),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: color.withOpacity(0.05), blurRadius: 10)
+          ],
         ),
-        child: Column(children: [Icon(icon, color: color, size: 30), const SizedBox(height: 8), Text(label, style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 13))]),
-      ),
-    );
-  }
-
-  Widget _buildInventoryMonitoring(BuildContext context, Color lime, Color magenta) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Monitoreo de Stock', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 16),
-        _buildStockProgress(context, 'Alimentos', 0.8, lime),
-        const SizedBox(height: 12),
-        _buildStockProgress(context, 'Bebidas', 0.25, magenta),
-      ],
-    );
-  }
-
-  Widget _buildStockProgress(BuildContext context, String label, double val, Color color) {
-    return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Top 3 bajos en $label: Prod1, Prod2, Prod3'), behavior: SnackBarBehavior.floating)),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label), Text('${(val * 100).toInt()}%', style: TextStyle(color: color, fontWeight: FontWeight.bold))]),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(value: val, backgroundColor: Colors.white12, color: color, minHeight: 6),
-            ),
-          ],
+            Icon(icon, color: color, size: 32), 
+            const SizedBox(height: 12), 
+            Text(
+              label, 
+              style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.0, color: Colors.white)
+            )
+          ]
         ),
       ),
     );
   }
 
-  Widget _buildRecentActivity(BuildContext context, Color cyan, Color magenta) {
+  Widget _buildInventoryMonitoring(BuildContext context, Color lime, Color cyan) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Actividad Reciente', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 16),
-        _buildActivityItem(context, 'Venta #042', 'Hace 2 min', '\$12.50', cyan),
+        _buildStockProgress('ALIMENTOS', 0.82, lime),
         const SizedBox(height: 12),
-        _buildActivityItem(context, 'Venta #041', 'Hace 15 min', '\$4.20', magenta),
+        _buildStockProgress('BEBIDAS', 0.35, cyan),
       ],
     );
   }
 
-  Widget _buildActivityItem(BuildContext context, String title, String time, String total, Color color) {
-    return InkWell(
-      onTap: () {},
-      onLongPress: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcado para revisión'), behavior: SnackBarBehavior.floating)),
-      child: GlassCard(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            CircleAvatar(backgroundColor: color.withOpacity(0.1), child: Icon(Icons.receipt_long, color: color, size: 20)),
-            const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.bold)), Text(time, style: TextStyle(color: Colors.grey, fontSize: 12))])),
-            Text(total, style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
-          ],
-        ),
+  Widget _buildStockProgress(String label, double val, Color color) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+            children: [
+              Text(
+                label, 
+                style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w900)
+              ), 
+              Text(
+                '${(val * 100).toInt()}%', 
+                style: GoogleFonts.spaceGrotesk(color: color, fontWeight: FontWeight.w900, fontSize: 13)
+              )
+            ]
+          ),
+          const SizedBox(height: 12),
+          Stack(
+            children: [
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: val,
+                child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 6)],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivity(BuildContext context, Color cyan, Color lime) {
+    return Column(
+      children: [
+        _buildActivityItem('VENTA #084', 'HACE 2 MIN', '\$24.50', cyan),
+        const SizedBox(height: 12),
+        _buildActivityItem('PRODUCTO AGREGADO', 'HACE 12 MIN', 'STOCK +20', lime),
+      ],
+    );
+  }
+
+  Widget _buildActivityItem(String title, String time, String value, Color color) {
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.bolt_rounded, color: color, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                Text(
+                  title, 
+                  style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.white)
+                ), 
+                Text(
+                  time, 
+                  style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.bold)
+                )
+              ]
+            )
+          ),
+          Text(
+            value, 
+            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w900, color: color, fontSize: 14)
+          ),
+        ],
       ),
     );
   }

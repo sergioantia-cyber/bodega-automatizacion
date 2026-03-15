@@ -26,6 +26,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   bool _showSuccess = false;
   String _manualInput = "";
 
+  final Color _darkBg = const Color(0xFF070907);
+  final Color _limeNeon = const Color(0xFF8CFF00);
+  final Color _cyanNeon = const Color(0xFF00FBFF);
+  final Color _cardBg = const Color(0xFF141714);
+
   @override
   void initState() {
     super.initState();
@@ -53,56 +58,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: _cardBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFFFF00FF)),
+          side: BorderSide(color: Colors.white.withOpacity(0.05)),
         ),
-        title: Text('¿Cancelar Venta?', style: GoogleFonts.spaceGrotesk(color: Colors.white)),
-        content: Text('Se perderán todos los productos escaneados.', style: TextStyle(color: Colors.grey[400])),
+        title: Text('¿CANCELAR VENTA?', style: GoogleFonts.orbitron(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+        content: Text('SE PERDERÁN TODOS LOS PRODUCTOS ESCANEADOS.', style: GoogleFonts.spaceGrotesk(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('NO', style: TextStyle(color: Colors.grey)),
+            child: Text('VOLVER', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontWeight: FontWeight.w900)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('SÍ, CANCELAR', style: TextStyle(color: Color(0xFFFF00FF), fontWeight: FontWeight.bold)),
+            child: Text('CANCELAR', style: GoogleFonts.spaceGrotesk(color: const Color(0xFFFF2D55), fontWeight: FontWeight.w900)),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showTaxBreakdown() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          border: Border.all(color: const Color(0xFF00E5FF).withOpacity(0.5)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Desglose de Impuestos', style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('IVA (7%)', style: TextStyle(color: Colors.white)), Text('\$${_tax.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF00E5FF)))]),
-            const Divider(color: Colors.white12, height: 32),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Total Impuestos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), 
-              Text('\$${_tax.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold))
-            ]),
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
@@ -113,26 +88,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: GlassCard(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Escanea para Pagar via Zelle', style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), textAlign: TextAlign.center),
+              Text('ESCANEAR ZELLE', style: GoogleFonts.orbitron(color: _cyanNeon, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
               const SizedBox(height: 24),
               Container(
-                width: 200, height: 200,
+                width: 220, height: 220,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: const Color(0xFFFF00FF).withOpacity(0.5), blurRadius: 20, spreadRadius: 2)],
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: _cyanNeon.withOpacity(0.3), blurRadius: 30)],
                 ),
-                child: const Icon(Icons.qr_code_2, size: 180, color: Colors.black),
+                child: const Icon(Icons.qr_code_2_rounded, size: 200, color: Colors.black),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF00FF), foregroundColor: Colors.black, shape: StadiumBorder()),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('CERRAR', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('MONTO TOTAL: \$${_total.toStringAsFixed(2)}', style: GoogleFonts.spaceGrotesk(color: Colors.white54, fontWeight: FontWeight.w900, fontSize: 12)),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _cyanNeon.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: _cyanNeon),
+                  ),
+                  child: Text('CERRAR', style: GoogleFonts.spaceGrotesk(color: _cyanNeon, fontWeight: FontWeight.w900)),
+                ),
               )
             ],
           ),
@@ -148,7 +132,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
           _manualInput = _manualInput.substring(0, _manualInput.length - 1);
         }
       } else {
-        // Simple decimal logic for demo
         if (key == '.' && _manualInput.contains('.')) return;
         _manualInput += key;
       }
@@ -157,21 +140,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Future<void> _processPayment() async {
     if (_selectedPayment == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seleccione un método de pago', style: TextStyle(color: Color(0xFFFF00FF))), backgroundColor: Colors.black));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('SELECCIONA MÉTODO DE PAGO', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w900)),
+          backgroundColor: const Color(0xFFFF2D55),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 
     setState(() => _isProcessing = true);
-    
-    // Simulate network delay
     await Future.delayed(const Duration(seconds: 2));
     
-    setState(() {
-      _isProcessing = false;
-      _showSuccess = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _showSuccess = true;
+      });
+    }
 
-    // Auto navigate back after success screen
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
       Navigator.pop(context);
@@ -181,19 +169,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF060606),
+      backgroundColor: _darkBg,
       appBar: AppBar(
-        title: Text('Punto de Venta', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        title: Text('CHECKOUT', style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 2.0, fontSize: 18, color: Colors.white)),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFFFF00FF)),
-          onPressed: _confirmCancel, // Cancel warning
+          icon: Icon(Icons.close_rounded, color: _limeNeon),
+          onPressed: _confirmCancel,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF00E5FF)),
-            onPressed: () {}, // Quick search overlay
+            icon: Icon(Icons.search_rounded, color: _cyanNeon),
+            onPressed: () {},
           ),
         ],
       ),
@@ -201,39 +190,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
         children: [
           Column(
             children: [
-              // 1. Scanner Area & Controls
               _buildScannerSection(),
-
-              // 2. Cart Items List
               Expanded(child: _buildCartList()),
-
-              // 3. Totals
               _buildTotalsSection(),
-
-              // 4. Numpad & Payment Selectors
               _buildNumpadAndPayments(),
-
-              // 5. Final Button
               _buildProcessButton(),
             ],
           ),
 
-          // Success State Full Screen Overlay
           if (_showSuccess)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutCubic,
-              width: double.infinity,
-              height: double.infinity,
-              color: const Color(0xFF00E5FF).withOpacity(0.95),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check_circle_outline, size: 100, color: Colors.black),
-                    const SizedBox(height: 20),
-                    Text('¡VENTA EXITOSA!', style: GoogleFonts.spaceGrotesk(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black)),
-                  ],
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                color: _limeNeon.withOpacity(0.95),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                        child: Icon(Icons.check_rounded, size: 80, color: _limeNeon),
+                      ),
+                      const SizedBox(height: 32),
+                      Text('TRANSACCIÓN', style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 2.0)),
+                      Text('EXITOSA', style: GoogleFonts.orbitron(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 4.0)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -244,22 +227,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Widget _buildScannerSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
       child: Column(
         children: [
           Container(
             height: 140,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+              color: _cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF00E5FF).withOpacity(0.4), width: 1.5),
-              boxShadow: [BoxShadow(color: const Color(0xFF00E5FF).withOpacity(0.1), blurRadius: 20)],
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              boxShadow: [BoxShadow(color: _cyanNeon.withOpacity(0.05), blurRadius: 20)],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Stack(
                 children: [
-                  const Center(child: Icon(Icons.qr_code_scanner, size: 60, color: Colors.white24)),
+                   Center(child: Icon(Icons.qr_code_scanner_rounded, size: 60, color: Colors.white.withOpacity(0.05))),
                   AnimatedBuilder(
                     animation: _laserAnimation,
                     builder: (context, child) {
@@ -269,8 +252,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                         child: Container(
                           height: 2,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00E5FF),
-                            boxShadow: [BoxShadow(color: const Color(0xFF00E5FF), blurRadius: 10, spreadRadius: 3)],
+                            color: _cyanNeon,
+                            boxShadow: [BoxShadow(color: _cyanNeon, blurRadius: 10, spreadRadius: 3)],
                           ),
                         ),
                       );
@@ -280,20 +263,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Scanner Quick Controls
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildControlBtn(
-                Icons.flashlight_on, 
-                _isFlashlightOn ? const Color(0xFFCCFF00) : Colors.grey, 
-                () => setState(() => _isFlashlightOn = !_isFlashlightOn)
-              ),
-              const SizedBox(width: 24),
-              _buildControlBtn(Icons.add, const Color(0xFF00E5FF), () {} /* Add manual */),
-              const SizedBox(width: 24),
-              _buildControlBtn(Icons.flip_camera_ios, Colors.white, () {} /* Rotate camera */),
+              _buildControlBtn(Icons.flashlight_on_rounded, _isFlashlightOn ? _limeNeon : Colors.white24, () => setState(() => _isFlashlightOn = !_isFlashlightOn)),
+              const SizedBox(width: 32),
+              _buildControlBtn(Icons.add_rounded, _cyanNeon, () {}),
+              const SizedBox(width: 32),
+              _buildControlBtn(Icons.flip_camera_ios_rounded, Colors.white24, () {}),
             ],
           )
         ],
@@ -307,19 +285,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.05),
           shape: BoxShape.circle,
-          border: Border.all(color: color.withOpacity(0.5)),
-          boxShadow: [if (color != Colors.grey && color != Colors.white) BoxShadow(color: color.withOpacity(0.3), blurRadius: 10)],
+          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: [if (color != Colors.white24) BoxShadow(color: color.withOpacity(0.1), blurRadius: 10)],
         ),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: color, size: 22),
       ),
     );
   }
 
   Widget _buildCartList() {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       itemCount: _cartItems.length,
       itemBuilder: (context, index) {
         final item = _cartItems[index];
@@ -332,55 +310,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
               children: [
                 const SizedBox(width: 8),
                 CustomSlidableAction(
-                  onPressed: (_) {},
-                  backgroundColor: const Color(0xFF00E5FF).withOpacity(0.1),
-                  foregroundColor: const Color(0xFF00E5FF),
-                  borderRadius: BorderRadius.circular(15),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.edit, size: 24),
-                      Text('Ajustar', style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.bold))
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                CustomSlidableAction(
                   onPressed: (_) => setState(() => _cartItems.removeAt(index)),
-                  backgroundColor: const Color(0xFFFF00FF).withOpacity(0.1),
-                  foregroundColor: const Color(0xFFFF00FF),
+                  backgroundColor: const Color(0xFFFF2D55).withOpacity(0.1),
+                  foregroundColor: const Color(0xFFFF2D55),
                   borderRadius: BorderRadius.circular(15),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.delete, size: 24),
-                      Text('Elim', style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.bold))
-                    ],
-                  ),
+                  child: const Icon(Icons.delete_outline_rounded, size: 24),
                 ),
               ],
             ),
             child: GlassCard(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.shopping_bag_outlined, color: Colors.white70, size: 20),
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+                    child: const Icon(Icons.shopping_bag_rounded, color: Colors.white24, size: 20),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item['name'], style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Cant: ${item['qty']}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                        Text(item['name'], style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+                        Text('CANT: ${item['qty']}', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900)),
                       ],
                     ),
                   ),
                   Text('\$${(item['price'] * item['qty']).toStringAsFixed(2)}', 
-                    style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
+                    style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, color: _limeNeon)
                   ),
                 ],
               ),
@@ -393,39 +351,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Widget _buildTotalsSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white10), bottom: BorderSide(color: Colors.white10)),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: _cardBg.withOpacity(0.5),
+        border: const Border(top: BorderSide(color: Colors.white10)),
       ),
       child: Column(
         children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(color: Colors.grey[400])), Text('\$${_subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))]),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _showTaxBreakdown,
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Tax (7%)', style: TextStyle(color: const Color(0xFF00E5FF).withOpacity(0.8), decoration: TextDecoration.underline, decorationColor: const Color(0xFF00E5FF))), 
-              Text('\$${_tax.toStringAsFixed(2)}', style: TextStyle(color: const Color(0xFF00E5FF).withOpacity(0.8)))
-            ]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+            children: [
+              Text('IMPUESTOS (7%)', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0)), 
+               Text('\$${_tax.toStringAsFixed(2)}', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w900))
+            ]
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('TOTAL', style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: _total, end: _total),
-                duration: const Duration(milliseconds: 300),
-                builder: (context, value, child) {
-                  return Text('\$${value.toStringAsFixed(2)}', 
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 32, 
-                      fontWeight: FontWeight.bold, 
-                      color: const Color(0xFF00E5FF),
-                      shadows: [const Shadow(color: Color(0xFF00E5FF), blurRadius: 15)]
-                    )
-                  );
-                },
+              Text('TOTAL', style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
+              Text('\$${_total.toStringAsFixed(2)}', 
+                style: GoogleFonts.orbitron(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.w900, 
+                  color: _cyanNeon,
+                  shadows: [Shadow(color: _cyanNeon.withOpacity(0.5), blurRadius: 15)]
+                )
               ),
             ],
           ),
@@ -436,11 +387,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Widget _buildNumpadAndPayments() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Numpad (Left)
           Expanded(
             flex: 3,
             child: GridView.count(
@@ -456,16 +406,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
             ),
           ),
           const SizedBox(width: 16),
-          // Payment Methods (Right)
           Expanded(
             flex: 2,
             child: Column(
               children: [
-                _buildPaymentOption('CASH', Icons.payments, const Color(0xFFCCFF00)),
+                _buildPaymentOption('CASH', Icons.payments_rounded, _limeNeon),
                 const SizedBox(height: 8),
-                _buildPaymentOption('CARD', Icons.credit_card, const Color(0xFF00E5FF)),
+                _buildPaymentOption('CARD', Icons.credit_card_rounded, _cyanNeon),
                 const SizedBox(height: 8),
-                _buildPaymentOption('ZELLE', Icons.account_balance_wallet, const Color(0xFFFF00FF)),
+                _buildPaymentOption('ZELLE', Icons.wallet_rounded, const Color(0xFFB388FF)),
               ],
             ),
           )
@@ -479,18 +428,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _handleNumpadPress(val),
-        splashColor: const Color(0xFF00E5FF).withOpacity(0.3),
-        borderRadius: BorderRadius.circular(10),
-        child: Ink(
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white12),
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
           child: Center(
             child: val == '<' 
-              ? const Icon(Icons.backspace_outlined, color: Colors.white70, size: 20)
-              : Text(val, style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              ? Icon(Icons.backspace_rounded, color: _limeNeon, size: 18)
+              : Text(val, style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
           ),
         ),
       ),
@@ -506,19 +454,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        height: 60,
+        height: 52,
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.white.withOpacity(0.02),
+          color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isSelected ? color : Colors.white12, width: isSelected ? 2 : 1),
-          boxShadow: [if (isSelected) BoxShadow(color: color.withOpacity(0.3), blurRadius: 15, spreadRadius: 1)],
+          border: Border.all(color: isSelected ? color : Colors.white.withOpacity(0.05), width: 1.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? color : Colors.white54, size: 24),
+            Icon(icon, color: isSelected ? color : Colors.white24, size: 18),
             const SizedBox(width: 8),
-            Text(id, style: GoogleFonts.spaceGrotesk(color: isSelected ? color : Colors.white54, fontWeight: FontWeight.bold)),
+            Text(id, style: GoogleFonts.spaceGrotesk(color: isSelected ? color : Colors.white24, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.0)),
           ],
         ),
       ),
@@ -527,23 +474,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Widget _buildProcessButton() {
     return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: GestureDetector(
           onTap: _isProcessing ? null : _processPayment,
           child: Container(
             width: double.infinity,
             height: 60,
             decoration: BoxDecoration(
-              color: _selectedPayment != null ? const Color(0xFF00E5FF) : Colors.grey[800],
+              gradient: LinearGradient(
+                colors: _selectedPayment != null ? [_cyanNeon, _limeNeon] : [Colors.white10, Colors.white10],
+              ),
               borderRadius: BorderRadius.circular(15),
               boxShadow: _selectedPayment != null ? [
-                const BoxShadow(color: Color(0xFF00E5FF), blurRadius: 20, spreadRadius: 2)
+                BoxShadow(color: _cyanNeon.withOpacity(0.3), blurRadius: 20)
               ] : [],
             ),
             child: Center(
               child: _isProcessing 
-                ? const SizedBox(width: 30, height: 30, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
-                : Text('PROCESS PAYMENT', style: GoogleFonts.spaceGrotesk(color: _selectedPayment != null ? Colors.black : Colors.grey[500], fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.5)),
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                : Text('COBRAR \$${_total.toStringAsFixed(2)}', style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
             ),
           ),
         ),
