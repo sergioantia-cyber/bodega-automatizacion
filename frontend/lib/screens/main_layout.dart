@@ -299,7 +299,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: Listenable.merge([_pulseController, _menuController]),
       builder: (context, child) {
-        final currentColor = _isMenuOpen ? const Color(0xFFFF2D55) : _limeNeon;
+        // Updated to use the coral/red color from the image as default
+        const coralNeon = Color(0xFFFF2D55);
+        final currentColor = _isMenuOpen ? const Color(0xFF00FBFF) : coralNeon;
         final rotation = _menuController.value * math.pi / 4;
 
         return GestureDetector(
@@ -307,20 +309,30 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
           child: Transform.rotate(
             angle: rotation,
             child: Container(
-              width: 70, height: 70,
+              width: 68, height: 68,
               decoration: BoxDecoration(
-                color: _darkBg,
+                color: Colors.black,
                 shape: BoxShape.circle,
-                border: Border.all(color: currentColor, width: 3),
+                border: Border.all(color: currentColor, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: currentColor.withOpacity(0.5 * _pulseController.value),
-                    blurRadius: 15 + (10 * _pulseController.value),
-                    spreadRadius: 2 * _pulseController.value,
+                    color: currentColor.withOpacity(0.4 * _pulseController.value),
+                    blurRadius: 12 + (8 * _pulseController.value),
+                    spreadRadius: 1 * _pulseController.value,
+                  ),
+                  BoxShadow(
+                    color: currentColor.withOpacity(0.2),
+                    blurRadius: 25,
                   ),
                 ],
               ),
-              child: Icon(_isMenuOpen ? Icons.close : Icons.add, color: currentColor, size: 36),
+              child: Center(
+                child: Icon(
+                  _isMenuOpen ? Icons.close_rounded : Icons.add_rounded, 
+                  color: currentColor, 
+                  size: 38
+                ),
+              ),
             ),
           ),
         );
