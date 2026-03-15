@@ -12,6 +12,7 @@ class DashboardScreen extends StatelessWidget {
     const cardBg = Color(0xFF141714);
     const limeNeon = Color(0xFF8CFF00);
     const cyanNeon = Color(0xFF00FBFF);
+    const magentaNeon = Color(0xFFFF00FF);
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Background managed by MainLayout
@@ -150,11 +151,14 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context, Color cyan, Color lime) {
+    const magentaNeon = Color(0xFFFF00FF);
     return Row(
       children: [
         Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
+        const SizedBox(width: 12),
+        Expanded(child: _buildActionButton('ESCANEAR', Icons.qr_code_scanner_rounded, magentaNeon, () {})),
       ],
     );
   }
@@ -187,11 +191,12 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildInventoryMonitoring(BuildContext context, Color lime, Color cyan) {
+    const magentaNeon = Color(0xFFFF00FF);
     return Column(
       children: [
         _buildStockProgress('ALIMENTOS', 0.82, lime),
         const SizedBox(height: 12),
-        _buildStockProgress('BEBIDAS', 0.35, cyan),
+        _buildStockProgress('BEBIDAS', 0.35, magentaNeon),
       ],
     );
   }

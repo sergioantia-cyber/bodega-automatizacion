@@ -299,9 +299,10 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: Listenable.merge([_pulseController, _menuController]),
       builder: (context, child) {
-        // Updated to use the coral/red color from the image as default
-        const coralNeon = Color(0xFFFF2D55);
-        final currentColor = _isMenuOpen ? const Color(0xFF00FBFF) : coralNeon;
+        // Updated to matching Vercel version: Cyan FAB
+        const cyanNeon = Color(0xFF00FBFF);
+        const magentaNeon = Color(0xFFFF00FF);
+        final currentColor = _isMenuOpen ? magentaNeon : cyanNeon;
         final rotation = _menuController.value * math.pi / 4;
 
         return GestureDetector(
@@ -317,12 +318,12 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
                 boxShadow: [
                   BoxShadow(
                     color: currentColor.withOpacity(0.4 * _pulseController.value),
-                    blurRadius: 12 + (8 * _pulseController.value),
-                    spreadRadius: 1 * _pulseController.value,
+                    blurRadius: 15 + (10 * _pulseController.value),
+                    spreadRadius: 2 * _pulseController.value,
                   ),
                   BoxShadow(
                     color: currentColor.withOpacity(0.2),
-                    blurRadius: 25,
+                    blurRadius: 30,
                   ),
                 ],
               ),

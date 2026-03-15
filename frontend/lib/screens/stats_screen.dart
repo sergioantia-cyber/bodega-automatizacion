@@ -18,6 +18,7 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   final Color _cardBg = const Color(0xFF141714);
   final Color _limeNeon = const Color(0xFF8CFF00);
   final Color _cyanNeon = const Color(0xFF00FBFF);
+  final Color _magentaNeon = const Color(0xFFFF00FF);
 
   // Fake data for charts
   final Map<int, double> _weeklyData = {
@@ -274,7 +275,7 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
         const SizedBox(width: 12),
         Expanded(child: KpiCard(title: 'UNIDADES', value: '856', growth: '+15%', color: _limeNeon)),
         const SizedBox(width: 12),
-        Expanded(child: KpiCard(title: 'RETORNOS', value: '42%', growth: '-2%', color: const Color(0xFFFF2D55))),
+        Expanded(child: KpiCard(title: 'RETORNOS', value: '42%', growth: '-2%', color: _magentaNeon)),
       ],
     );
   }
@@ -303,9 +304,9 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                           sectionsSpace: 4,
                           centerSpaceRadius: 35,
                           sections: [
-                            PieChartSectionData(color: _cyanNeon, value: 60, title: '', radius: 10),
-                            PieChartSectionData(color: _limeNeon, value: 25, title: '', radius: 10),
-                            PieChartSectionData(color: Colors.white12, value: 15, title: '', radius: 10),
+                            PieChartSectionData(color: _cyanNeon, value: 60, title: '', radius: 10, showTitle: false),
+                            PieChartSectionData(color: _limeNeon, value: 25, title: '', radius: 10, showTitle: false),
+                            PieChartSectionData(color: _magentaNeon, value: 15, title: '', radius: 10, showTitle: false),
                           ],
                         ),
                       ),
@@ -317,13 +318,13 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
               const SizedBox(width: 24),
               Expanded(
                 child: Column(
-                  children: [
-                    _buildLegendItem('ALIMENTOS', '60%', _cyanNeon),
-                    const SizedBox(height: 12),
-                    _buildLegendItem('BEBIDAS', '25%', _limeNeon),
-                    const SizedBox(height: 12),
-                    _buildLegendItem('OTROS', '15%', Colors.white12),
-                  ],
+                    children: [
+                      _buildLegendItem('ALIMENTOS', '60%', _cyanNeon),
+                      const SizedBox(height: 12),
+                      _buildLegendItem('BEBIDAS', '25%', _limeNeon),
+                      const SizedBox(height: 12),
+                      _buildLegendItem('OTROS', '15%', _magentaNeon),
+                    ],
                 ),
               )
             ],
