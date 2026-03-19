@@ -183,11 +183,9 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
         // Central position slightly above the FAB
         const centerY = 360.0;
         const spread = 135.0;
-
-        // Angles for a symmetric 5-point radial layout (12, 2:30, 4:30, 7:30, 9:30 o'clock)
-        // Note: -math.pi/2 is Top (12 o'clock)
+        // Angles for a symmetric 6-point radial layout
         const double top = -math.pi / 2;
-        const double step = (2 * math.pi) / 5;
+        const double step = (2 * math.pi) / 7;
 
         double bx(double angle) => centerX + math.cos(angle) * (spread * val);
         double by(double angle) => centerY - math.sin(angle) * (spread * val);
@@ -201,27 +199,39 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               Icons.shopping_cart_rounded, _cyanNeon, 'VENDER', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/checkout'); }
             ),
-            // Top-Right: NUEVO PROD (Lime)
+            // NUEVO PROD (Lime)
             _buildGlassBubble(
               bx(top + step), by(top + step), 
               Icons.add_rounded, _limeNeon, 'NUEVO PROD', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/add_product'); }
             ),
-            // Bottom-Right: GASTO (Pink)
+            // CLIENTES (New - Blue)
             _buildGlassBubble(
               bx(top + 2 * step), by(top + 2 * step), 
+              Icons.people_alt_rounded, const Color(0xFF00E5FF), 'CLIENTES', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/clients'); }
+            ),
+            // GASTO (Pink)
+            _buildGlassBubble(
+              bx(top + 3 * step), by(top + 3 * step), 
               Icons.description_rounded, const Color(0xFFFF2D55), 'GASTO', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/expense'); }
             ),
-            // Bottom-Left: HISTORIAL (Purple)
+            // PROVEEDORES (Orange)
             _buildGlassBubble(
-              bx(top + 3 * step), by(top + 3 * step), 
+              bx(top + 4 * step), by(top + 4 * step), 
+              Icons.business_rounded, const Color(0xFFFF9100), 'PROVEEDORES', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/suppliers'); }
+            ),
+            // HISTORIAL (Purple)
+            _buildGlassBubble(
+              bx(top + 5 * step), by(top + 5 * step), 
               Icons.history_rounded, const Color(0xFFB388FF), 'HISTORIAL', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/expense_history'); }
             ),
-            // Top-Left: ESCANEAR (Yellow)
+            // ESCANEAR (Yellow)
             _buildGlassBubble(
-              bx(top + 4 * step), by(top + 4 * step), 
+              bx(top + 6 * step), by(top + 6 * step), 
               Icons.qr_code_scanner_rounded, const Color(0xFFFFD600), 'ESCANEAR', val, 
               () { _toggleMenu(); } // Logic for scanner
             ),

@@ -28,7 +28,7 @@ class UserProfileScreen extends StatelessWidget {
                 'Reporte final y arqueo de caja', 
                 Icons.lock_clock_rounded, 
                 limeNeon, 
-                () => Navigator.pushNamed(context, '/close_shift')
+                () => Navigator.pushNamed(context, '/cash_management')
               ),
               const SizedBox(height: 12),
               _buildOptionCard(
@@ -39,14 +39,25 @@ class UserProfileScreen extends StatelessWidget {
                 cyanNeon, 
                 () {}
               ),
+              const SizedBox(height: 32),
+              _buildSectionTitle('GESTIÓN EMPRESARIAL'),
+              const SizedBox(height: 16),
+              _buildOptionCard(
+                context, 
+                'PROVEEDORES', 
+                'Gestión de compras y proveedores', 
+                Icons.business_rounded, 
+                const Color(0xFFFF9100), 
+                () => Navigator.pushNamed(context, '/suppliers')
+              ),
               const SizedBox(height: 12),
               _buildOptionCard(
                 context, 
-                'SOPORTE TÉCNICO', 
-                'Contactar con el equipo POS Ureña', 
-                Icons.support_agent_rounded, 
-                Colors.white70, 
-                () {}
+                'CLIENTES Y CRÉDITO', 
+                'Gestión de fidelización y fiaos', 
+                Icons.person_pin_rounded, 
+                const Color(0xFFFF00FF), 
+                () => Navigator.pushNamed(context, '/clients')
               ),
               const SizedBox(height: 48),
               _buildLogoutButton(redNeon),

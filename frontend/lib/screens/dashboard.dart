@@ -2,44 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../components/glass_card.dart';
+import 'package:share_plus/share_plus.dart';
+import '../models/product.dart';
+import '../models/sale.dart';
+import '../services/product_service.dart';
+import '../services/sales_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final ProductService _productService = ProductService();
+  final SalesService _salesService = SalesService();
+
+  double _totalSalesToday = 0.0;
+  double _foodStockLevel = 0.0;
+  double _drinkStockLevel = 0.0;
+  List<Sale> _recentSales = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. Load Sales
+      final sales = await _salesService.getAllSales();
+      final now = DateTime.now();
+      final todaySales = sales.where((s) {
+        if (s.date == null) return false;
+        return s.date!.day == now.day && s.date!.month == now.month && s.date!.year == now.year;
+      }).toList();
+
+      // 2. Load Products for stock monitoring
+      final products = await _productService.getAllProducts();
+      
+      // Calculate levels
+      final foodProducts = products.where((p) => p.category == 'Alimentos').toList();
+      final drinkProducts = products.where((p) => p.category == 'Bebidas').toList();
+
+      double calcLevel(List<Product> list) {
+        if (list.isEmpty) return 0.0;
+        double totalStock = list.fold(0, (sum, p) => sum + p.stock);
+        double totalMax = list.fold(0, (sum, p) => sum + p.maxStock);
+        return (totalStock / totalMax).clamp(0.0, 1.0);
+      }
+
+      setState(() {
+        _totalSalesToday = todaySales.fold(0.0, (sum, s) => sum + s.total);
+        _recentSales = sales.take(3).toList();
+        _foodStockLevel = calcLevel(foodProducts);
+        _drinkStockLevel = calcLevel(drinkProducts);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print('Error loading dashboard: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const darkBg = Color(0xFF070907);
-    const cardBg = Color(0xFF141714);
     const limeNeon = Color(0xFF8CFF00);
     const cyanNeon = Color(0xFF00FBFF);
     const magentaNeon = Color(0xFFFF00FF);
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Background managed by MainLayout
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              _buildHeader(limeNeon),
-              const SizedBox(height: 32),
-              _buildSalesChart(cyanNeon, limeNeon),
-              const SizedBox(height: 32),
-              _buildSectionTitle('ACCIONES RÁPIDAS'),
-              const SizedBox(height: 16),
-              _buildQuickActions(context, cyanNeon, limeNeon),
-              const SizedBox(height: 32),
-              _buildSectionTitle('MONITOREO DE STOCK'),
-              const SizedBox(height: 16),
-              _buildInventoryMonitoring(context, limeNeon, cyanNeon),
-              const SizedBox(height: 32),
-              _buildSectionTitle('ACTIVIDAD RECIENTE'),
-              const SizedBox(height: 16),
-              _buildRecentActivity(context, cyanNeon, limeNeon),
-              const SizedBox(height: 120), // Bottom nav padding
-            ],
+      backgroundColor: Colors.transparent,
+      body: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        color: cyanNeon,
+        backgroundColor: const Color(0xFF141714),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(limeNeon),
+                const SizedBox(height: 32),
+                _buildSalesChart(cyanNeon, limeNeon),
+                const SizedBox(height: 32),
+                _buildSectionTitle('ACCIONES RÁPIDAS'),
+                const SizedBox(height: 16),
+                _buildQuickActions(context, cyanNeon, limeNeon),
+                const SizedBox(height: 32),
+                _buildSectionTitle('MONITOREO DE STOCK'),
+                const SizedBox(height: 16),
+                _isLoading 
+                  ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                  : _buildInventoryMonitoring(context, limeNeon, magentaNeon),
+                const SizedBox(height: 32),
+                _buildSectionTitle('ACTIVIDAD RECIENTE'),
+                const SizedBox(height: 16),
+                _isLoading
+                  ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                  : _buildRecentActivity(context, cyanNeon, limeNeon),
+                const SizedBox(height: 120),
+              ],
+            ),
           ),
         ),
       ),
@@ -109,8 +180,8 @@ class DashboardScreen extends StatelessWidget {
                 style: GoogleFonts.spaceGrotesk(color: primary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)
               ),
               Text(
-                '+\$1,240.50', 
-                style: GoogleFonts.spaceGrotesk(color: secondary, fontWeight: FontWeight.w900, fontSize: 14)
+                '\$${_totalSalesToday.toStringAsFixed(2)}', 
+                style: GoogleFonts.spaceGrotesk(color: secondary, fontWeight: FontWeight.w900, fontSize: 18)
               ),
             ],
           ),
@@ -152,15 +223,35 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildQuickActions(BuildContext context, Color cyan, Color lime) {
     const magentaNeon = Color(0xFFFF00FF);
-    return Row(
+    return Column(
       children: [
-        Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
-        const SizedBox(width: 12),
-        Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
-        const SizedBox(width: 12),
-        Expanded(child: _buildActionButton('ESCANEAR', Icons.qr_code_scanner_rounded, magentaNeon, () {})),
+        Row(
+          children: [
+            Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionButton('ESCANEAR', Icons.qr_code_scanner_rounded, magentaNeon, () {})),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildActionButton('CATÁLOGO', Icons.local_mall_rounded, cyan, () => _shareCatalog())),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionButton('PEDIDOS', Icons.notifications_active_rounded, magentaNeon, () => Navigator.pushNamed(context, '/online_orders'))),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionButton('CLIENTES', Icons.people_alt_rounded, lime, () => Navigator.pushNamed(context, '/clients'))),
+          ],
+        ),
       ],
     );
+  }
+
+  void _shareCatalog() {
+    // Replace with actual URL when deployed
+    const catalogUrl = 'https://pos-urena-store.vercel.app'; 
+    Share.share('🛒 ¡Hola! Mira nuestro catálogo de calzado aquí: $catalogUrl');
   }
 
   Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap) {
@@ -172,9 +263,6 @@ class DashboardScreen extends StatelessWidget {
           color: const Color(0xFF141714),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withOpacity(0.2), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: color.withOpacity(0.05), blurRadius: 10)
-          ],
         ),
         child: Column(
           children: [
@@ -190,13 +278,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInventoryMonitoring(BuildContext context, Color lime, Color cyan) {
-    const magentaNeon = Color(0xFFFF00FF);
+  Widget _buildInventoryMonitoring(BuildContext context, Color lime, Color magenta) {
     return Column(
       children: [
-        _buildStockProgress('ALIMENTOS', 0.82, lime),
+        _buildStockProgress('ALIMENTOS', _foodStockLevel, lime),
         const SizedBox(height: 12),
-        _buildStockProgress('BEBIDAS', 0.35, magentaNeon),
+        _buildStockProgress('BEBIDAS', _drinkStockLevel, magenta),
       ],
     );
   }
@@ -230,7 +317,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               FractionallySizedBox(
-                widthFactor: val,
+                widthFactor: val < 0.05 ? 0.05 : val, // Min width for visibility
                 child: Container(
                   height: 6,
                   decoration: BoxDecoration(
@@ -248,12 +335,21 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildRecentActivity(BuildContext context, Color cyan, Color lime) {
+    if (_recentSales.isEmpty) {
+      return Center(child: Text('No hay actividad reciente', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 12)));
+    }
     return Column(
-      children: [
-        _buildActivityItem('VENTA #084', 'HACE 2 MIN', '\$24.50', cyan),
-        const SizedBox(height: 12),
-        _buildActivityItem('PRODUCTO AGREGADO', 'HACE 12 MIN', 'STOCK +20', lime),
-      ],
+      children: _recentSales.map((sale) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildActivityItem(
+            'VENTA #${sale.orderNumber ?? '???'}', 
+            '${sale.date?.hour}:${sale.date?.minute}', 
+            '\$${sale.total.toStringAsFixed(2)}', 
+            cyan
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -10,17 +10,20 @@ import 'screens/expense_screen.dart';
 import 'screens/expense_history_screen.dart';
 import 'screens/add_product_screen.dart';
 import 'screens/close_shift_screen.dart';
+import 'screens/product_detail_screen.dart';
+import 'screens/edit_product_screen.dart';
+import 'screens/suppliers_screen.dart';
+import 'screens/cash_management_screen.dart';
+import 'screens/clients_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Reemplazar con las credenciales reales de Supabase
-  const supabaseUrl = 'TU_SUPABASE_URL';
-  const supabaseAnonKey = 'TU_SUPABASE_ANON_KEY';
+  // Credenciales reales de Supabase - POS Ureña
+  const supabaseUrl = 'https://unilnrmadkjhxweulbfw.supabase.co';
+  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuaWxucm1hZGtqaHh3ZXVsYmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTc5ODEsImV4cCI6MjA4OTM3Mzk4MX0.gBVNMc_qB5UTyx9VOhVG0DbLVko6PgCu5NiQQW-Foaw';
   
-  if (supabaseUrl != 'TU_SUPABASE_URL') {
-    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-  }
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
   runApp(const PosUrenaApp());
 }
@@ -56,6 +59,11 @@ class PosUrenaApp extends StatelessWidget {
         '/expense_history': (context) => const ExpenseHistoryScreen(),
         '/add_product': (context) => const AddProductScreen(),
         '/close_shift': (context) => const CloseShiftScreen(),
+        '/product_detail': (context) => const ProductDetailScreen(),
+        '/edit_product': (context) => const EditProductScreen(),
+        '/suppliers': (context) => const SuppliersScreen(),
+        '/cash_management': (context) => const CashManagementScreen(),
+        '/clients': (context) => const ClientsScreen(),
         // TODO: Agregar rutas de Reportes
       },
     );

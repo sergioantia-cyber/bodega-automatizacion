@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import '../services/product_service.dart';
+import '../models/product.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -10,38 +12,127 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
+  final ProductService _productService = ProductService();
   final Color _darkBg = const Color(0xFF070907); // Darker background
   final Color _limeNeon = const Color(0xFF8CFF00); // More vibrant lime
   final Color _cyanNeon = const Color(0xFF00FBFF); // Vibrante cyan
   final Color _cardBg = const Color(0xFF141714); // Container bg
 
   bool _isTrackingStock = true;
+  bool _isLoading = false;
   
-  // Focus nodes to glow the fields
+  // Controllers
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _catController = TextEditingController();
+  final TextEditingController _skuController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _saleController = TextEditingController();
+  // Optional stock
+  final TextEditingController _stockController = TextEditingController(text: '0');
+
+  // Focus nodes
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _catFocus = FocusNode();
   final FocusNode _skuFocus = FocusNode();
   final FocusNode _costFocus = FocusNode();
   final FocusNode _saleFocus = FocusNode();
+  final FocusNode _stockFocus = FocusNode();
+
+  List<String> _categories = ['Alimentos', 'Bebidas', 'Limpieza', 'Lácteos', 'Charcutería', 'Cosméticos', 'General'];
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
+    _catController.text = 'General';
     _nameFocus.addListener(() => setState(() {}));
     _catFocus.addListener(() => setState(() {}));
     _skuFocus.addListener(() => setState(() {}));
     _costFocus.addListener(() => setState(() {}));
     _saleFocus.addListener(() => setState(() {}));
+    _stockFocus.addListener(() => setState(() {}));
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final dbCategories = await _productService.getCategories();
+      if (mounted && dbCategories.isNotEmpty) {
+        setState(() {
+          // Merge default with DB ones, keeping unique
+          final Set<String> allCats = {..._categories, ...dbCategories};
+          _categories = allCats.toList();
+          _categories.sort();
+        });
+      }
+    } catch (e) {
+      print('Error loading cats: $e');
+    }
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _catController.dispose();
+    _skuController.dispose();
+    _costController.dispose();
+    _saleController.dispose();
+    _stockController.dispose();
+
     _nameFocus.dispose();
     _catFocus.dispose();
     _skuFocus.dispose();
     _costFocus.dispose();
     _saleFocus.dispose();
+    _stockFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveProduct() async {
+    if (_nameController.text.isEmpty || _saleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El nombre y el precio de venta son obligatorios', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    try {
+      final double price = double.tryParse(_saleController.text) ?? 0.0;
+      final int stock = int.tryParse(_stockController.text) ?? 0;
+      final double costPrice = double.tryParse(_costController.text) ?? 0.0;
+
+      final product = Product(
+        name: _nameController.text,
+        price: price,
+        stock: stock,
+        active: true,
+        category: _catController.text,
+        barcode: _skuController.text,
+        cost: costPrice,
+      );
+
+      await _productService.addProduct(product);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        Navigator.pop(context, true); // Return true indicating success
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('¡Producto almacenado!', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
+            backgroundColor: _limeNeon.withOpacity(0.9),
+            behavior: SnackBarBehavior.floating,
+          )
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -60,19 +151,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     const SizedBox(height: 20),
                     _buildImageUpload(),
                     const SizedBox(height: 48),
-                    _buildInputField('NOMBRE DEL PRODUCTO', 'ej. Cyber Energy Drink', _nameFocus),
+                    _buildInputField('NOMBRE DEL PRODUCTO', 'ej. Cyber Energy Drink', _nameController, _nameFocus),
                     const SizedBox(height: 20),
-                    _buildDropdownField('CATEGORÍA', 'Seleccionar Categoría', _catFocus),
+                    _buildCategoryDropdown(),
                     const SizedBox(height: 20),
-                    _buildInputField('SKU / CÓDIGO BARRAS', 'Escanear o teclear', _skuFocus, trailingIcon: Icons.qr_code_scanner),
+                    _buildInputField('SKU / CÓDIGO BARRAS', 'Escanear o teclear', _skuController, _skuFocus, trailingIcon: Icons.qr_code_scanner),
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: _buildInputField('COSTO', '\$ 0.00', _costFocus)),
+                        Expanded(child: _buildInputField('COSTO', '\$ 0.00', _costController, _costFocus, isNumeric: true)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildInputField('PRECIO VENTA', '\$ 0.00', _saleFocus)),
+                        Expanded(child: _buildInputField('PRECIO VENTA', '\$ 0.00', _saleController, _saleFocus, isNumeric: true)),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    _buildInputField('STOCK INICIAL', '0', _stockController, _stockFocus, isNumeric: true),
                     const SizedBox(height: 24),
                     _buildStockToggle(),
                     const SizedBox(height: 40),
@@ -85,6 +178,119 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryDropdown() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: _cardBg.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _catFocus.hasFocus ? _limeNeon.withOpacity(0.5) : Colors.white.withOpacity(0.08),
+                  width: _catFocus.hasFocus ? 1.5 : 1,
+                ),
+                boxShadow: _catFocus.hasFocus ? [
+                  BoxShadow(color: _limeNeon.withOpacity(0.05), blurRadius: 20, spreadRadius: 0)
+                ] : [],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CATEGORÍA',
+                    style: GoogleFonts.spaceGrotesk(
+                      color: _limeNeon.withOpacity(0.7),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2
+                    )
+                  ),
+                  const SizedBox(height: 4),
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return _categories;
+                      }
+                      return _categories.where((String option) {
+                        return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                      });
+                    },
+                    onSelected: (String selection) {
+                      _catController.text = selection;
+                      FocusScope.of(context).unfocus();
+                    },
+                    fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+                      // Workaround to sync with our external controller if needed
+                      // but Autocomplete usually manages its own.
+                      // For now, let's just make sure it starts with the right value.
+                      if (textController.text.isEmpty && _catController.text.isNotEmpty) {
+                        textController.text = _catController.text;
+                      }
+                      
+                      textController.addListener(() {
+                        _catController.text = textController.text;
+                      });
+
+                      return TextField(
+                        controller: textController,
+                        focusNode: focusNode,
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                        decoration: InputDecoration(
+                          hintText: 'Escoger o escribir...',
+                          hintStyle: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 15),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      );
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            width: constraints.maxWidth,
+                            margin: const EdgeInsets.only(top: 4),
+                            decoration: BoxDecoration(
+                              color: _cardBg,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: _limeNeon.withOpacity(0.3)),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10)
+                              ]
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final String option = options.elementAt(index);
+                                return ListTile(
+                                  title: Text(option, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 14)),
+                                  onTap: () => onSelected(option),
+                                  dense: true,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      }
     );
   }
 
@@ -182,7 +388,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildInputField(String label, String hint, FocusNode focusNode, {IconData? trailingIcon}) {
+  Widget _buildInputField(String label, String hint, TextEditingController controller, FocusNode focusNode, {IconData? trailingIcon, bool isNumeric = false}) {
     bool isFocused = focusNode.hasFocus;
     return Container(
       decoration: BoxDecoration(
@@ -214,7 +420,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               Expanded(
                 child: TextField(
+                  controller: controller,
                   focusNode: focusNode,
+                  keyboardType: isNumeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
                   style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
                   decoration: InputDecoration(
                     hintText: hint,
@@ -239,47 +447,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ]
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownField(String label, String hint, FocusNode focusNode) {
-    bool isFocused = focusNode.hasFocus;
-    return Container(
-      decoration: BoxDecoration(
-        color: _cardBg.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isFocused ? _limeNeon.withOpacity(0.5) : Colors.white.withOpacity(0.08),
-          width: isFocused ? 1.5 : 1,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.spaceGrotesk(
-              color: _limeNeon.withOpacity(0.7),
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2
-            )
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                hint,
-                style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 15)
-              ),
-              Icon(Icons.keyboard_arrow_down_rounded, color: _limeNeon, size: 26),
-            ],
-          ),
-          const SizedBox(height: 2),
         ],
       ),
     );
@@ -318,16 +485,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Widget _buildSaveButton() {
     return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('¡Producto almacenado!', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
-            backgroundColor: _limeNeon.withOpacity(0.9),
-            behavior: SnackBarBehavior.floating,
-          )
-        );
-      },
+      onTap: _isLoading ? null : _saveProduct,
       child: Container(
         width: double.infinity,
         height: 64,
@@ -346,10 +504,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add_circle, color: Colors.black, size: 28),
+            if (_isLoading)
+              const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+            else
+              const Icon(Icons.add_circle, color: Colors.black, size: 28),
             const SizedBox(width: 12),
             Text(
-              'GUARDAR PRODUCTO',
+              _isLoading ? 'GUARDANDO...' : 'GUARDAR PRODUCTO',
               style: GoogleFonts.spaceGrotesk(
                 color: Colors.black,
                 fontWeight: FontWeight.w900,
@@ -363,6 +524,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 }
+
 
 class DashedCirclePainter extends CustomPainter {
   final Color color;
