@@ -87,6 +87,14 @@ function App() {
                 ))}
               </div>
             </div>
+            <div className="flex-1">
+              <p className="text-[10px] uppercase font-black text-[#444] tracking-widest mb-4">Género</p>
+              <div className="flex flex-wrap gap-2">
+                {genders.map(g => (
+                  <button key={g} onClick={() => setSelectedGenders(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])} className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${selectedGenders.includes(g) ? 'bg-neonLime border-neonLime text-black' : 'bg-[#111] border-[#222] text-[#666]'}`}>{g}</button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

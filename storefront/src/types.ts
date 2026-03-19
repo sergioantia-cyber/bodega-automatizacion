@@ -17,11 +17,14 @@ export interface Producto {
 export interface CartItem extends Producto {
   quantity: number
   selectedSize: string
+  referenceCode?: string
 }
 
 export interface OrderDetails {
   customerName: string
-  address: string
-  phone: string
+  customerPhone?: string
+  address?: string
+  phone?: string
+  paymentMethod?: string
   notes?: string
 }
