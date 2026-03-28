@@ -413,11 +413,14 @@ class _EditProductScreenState extends State<EditProductScreen> with TickerProvid
       builder: (context, child) {
         return GestureDetector(
           onTap: () {
-            // Success animation mock
+            // Sanitize price before any logic
+            final String input = _priceController.text.replaceAll('.', '').replaceAll(',', '');
+            final double price = double.tryParse(input) ?? 0.0;
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: limeNeon,
-                content: Text('DATOS ACTUALIZADOS', style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.w900)),
+                content: Text('PRODUCTO ACTUALIZADO: COP ${price.toStringAsFixed(0)}', style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.w900)),
               ),
             );
           },

@@ -41,7 +41,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   String? _selectedPayment;
   bool _isProcessing = false;
   bool _showSuccess = false;
-  int? _editingIndex; // Track index in _cartItems being edited for quantity
+  int? _editingIndex; // Track index in _cartItems being edited
+  bool _isEditingPrice = false; // Toggle for numpad: true=Price, false=Qty
+
   
   // Barcode Scanning
   final MobileScannerController _scannerController = MobileScannerController();
@@ -243,27 +245,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   void _handleNumpadPress(String key) {
     if (_editingIndex != null) {
       setState(() {
-        String currentQtyString = _cartItems[_editingIndex!]['qty'].toString();
-        
-        if (key == '<') {
-          if (currentQtyString.length > 1) {
-             currentQtyString = currentQtyString.substring(0, currentQtyString.length - 1);
+        if (_isEditingPrice) {
+          String currentPriceString = _cartItems[_editingIndex!]['price'].toStringAsFixed(0);
+          if (key == '<') {
+            if (currentPriceString.length > 1) {
+              currentPriceString = currentPriceString.substring(0, currentPriceString.length - 1);
+            } else {
+              currentPriceString = "0";
+            }
+          } else if (key == '.') {
+            return; // PESOS are integers usually
           } else {
-             currentQtyString = "1";
+            if (currentPriceString == "0") currentPriceString = key;
+            else currentPriceString += key;
           }
-        } else if (key == '.') {
-          return; // Quantities are integers
+          _cartItems[_editingIndex!]['price'] = double.tryParse(currentPriceString) ?? 0.0;
         } else {
-           if (currentQtyString == "1" || currentQtyString == "0") {
-              currentQtyString = key;
-           } else {
-              currentQtyString += key;
-           }
+          String currentQtyString = _cartItems[_editingIndex!]['qty'].toString();
+          if (key == '<') {
+            if (currentQtyString.length > 1) {
+              currentQtyString = currentQtyString.substring(0, currentQtyString.length - 1);
+            } else {
+              currentQtyString = "1";
+            }
+          } else if (key == '.') {
+            return;
+          } else {
+            if (currentQtyString == "1" || currentQtyString == "0") currentQtyString = key;
+            else currentQtyString += key;
+          }
+          int newQty = int.tryParse(currentQtyString) ?? 1;
+          if (newQty <= 0) newQty = 1;
+          _cartItems[_editingIndex!]['qty'] = newQty;
         }
-        
-        int newQty = int.tryParse(currentQtyString) ?? 1;
-        if (newQty <= 0) newQty = 1;
-        _cartItems[_editingIndex!]['qty'] = newQty;
       });
     }
   }
@@ -411,6 +425,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
           'name': p.name,
           'price': p.price,
           'qty': 1,
+          'originalStock': p.stock,
+          'imageUrl': p.imageUrl,
         });
         _editingIndex = _cartItems.length - 1;
       }
@@ -725,7 +741,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: isEditing ? _cyanNeon.withOpacity(0.3) : Colors.white12),
                       ),
-                      child: Icon(Icons.shopping_bag_rounded, color: isEditing ? _cyanNeon : Colors.white24, size: 20),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: (item['imageUrl'] != null && item['imageUrl']!.isNotEmpty)
+                          ? Image.network(item['imageUrl'], fit: BoxFit.cover, errorBuilder: (_,__,___) => Icon(Icons.shopping_bag_rounded, color: isEditing ? _cyanNeon : Colors.white24, size: 20))
+                          : Icon(Icons.shopping_bag_rounded, color: isEditing ? _cyanNeon : Colors.white24, size: 20),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -735,20 +756,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                           Text(item['name'], style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
                           Row(
                             children: [
+                              Text('STOCK: ', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 8, fontWeight: FontWeight.w900)),
+                              Text('${(item['originalStock'] ?? 0) - item['qty']}', 
+                                style: GoogleFonts.spaceGrotesk(color: ((item['originalStock'] ?? 0) - item['qty']) < 5 ? const Color(0xFFFF2D55) : _limeNeon, fontSize: 8, fontWeight: FontWeight.w900)),
+                              const SizedBox(width: 8),
                               Text('CANT: ', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900)),
-                              Text('${item['qty']}', style: GoogleFonts.spaceGrotesk(color: isEditing ? _cyanNeon : Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
-                              if (isEditing) 
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: Text('« EDITANDO', style: GoogleFonts.spaceGrotesk(color: _cyanNeon.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                                ),
+                              Text('${item['qty']}', style: GoogleFonts.spaceGrotesk(color: isEditing && !_isEditingPrice ? _cyanNeon : Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    Text('COP ${(item['price'] * item['qty']).toStringAsFixed(0)}', 
-                      style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, color: isEditing ? _cyanNeon : _limeNeon)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('COP ${item['price'].toStringAsFixed(0)}', 
+                          style: GoogleFonts.spaceGrotesk(fontSize: 14, fontWeight: FontWeight.w900, color: isEditing && _isEditingPrice ? _cyanNeon : Colors.white70)
+                        ),
+                        Text('TOTAL: COP ${(item['price'] * item['qty']).toStringAsFixed(0)}', 
+                          style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.w900, color: _limeNeon)
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -798,54 +826,95 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   Widget _buildNumpadAndPayments() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
         children: [
-          Expanded(
-            flex: 3,
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              childAspectRatio: 1.5,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '<'
-              ].map((key) => _buildNumpadKey(key)).toList(),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildToggleEditBtn('CANTIDAD', Icons.exposure_rounded, !_isEditingPrice, () => setState(() => _isEditingPrice = false)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildToggleEditBtn('PRECIO', Icons.payments_rounded, _isEditingPrice, () => setState(() => _isEditingPrice = true)),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 220,
-              child: SingleChildScrollView(
-                child: Column(
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  childAspectRatio: 1.5,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                   children: [
-                    _buildPaymentOption('CASH', Icons.payments_rounded, _limeNeon),
-                    const SizedBox(height: 8),
-                    _buildPaymentOption('CARD', Icons.credit_card_rounded, _cyanNeon),
-                    ..._dynamicPayments.map((p) => Column(children: [
-                        const SizedBox(height: 8),
-                        _buildPaymentOption(p.bank, Icons.qr_code_scanner_rounded, 
-                          p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
-                          p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
-                          _limeNeon, 
-                          onTap: () => _showPaymentQR(p, 
-                            p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
-                            p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
-                            _limeNeon
-                          )
-                        ),
-                    ])).toList(),
-                  ],
+                    '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '<'
+                  ].map((key) => _buildNumpadKey(key)).toList(),
                 ),
               ),
-            ),
-          )
+              const SizedBox(width: 20),
+              Expanded(
+                flex: 1,
+                child: SizedBox(
+                  height: 220,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildPaymentOption('CASH', Icons.payments_rounded, _limeNeon),
+                        const SizedBox(height: 8),
+                        _buildPaymentOption('CARD', Icons.credit_card_rounded, _cyanNeon),
+                        ..._dynamicPayments.map((p) => ListTileTheme(
+                          contentPadding: EdgeInsets.zero,
+                          child: Column(children: [
+                            const SizedBox(height: 8),
+                            _buildPaymentOption(p.bank, Icons.qr_code_scanner_rounded, 
+                              p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
+                              p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
+                              _limeNeon, 
+                              onTap: () => _showPaymentQR(p, 
+                                p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
+                                p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
+                                _limeNeon
+                              )
+                            ),
+                          ]),
+                        )).toList(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildToggleEditBtn(String label, IconData icon, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: active ? _cyanNeon.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: active ? _cyanNeon.withOpacity(0.5) : Colors.white10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: active ? _cyanNeon : Colors.white24, size: 16),
+            const SizedBox(width: 8),
+            Text(label, style: GoogleFonts.orbitron(color: active ? Colors.white : Colors.white24, fontSize: 10, fontWeight: FontWeight.w900)),
+          ],
+        ),
       ),
     );
   }

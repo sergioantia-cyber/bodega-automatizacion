@@ -6,6 +6,8 @@ import 'dashboard.dart';
 import 'inventory_screen.dart';
 import 'stats_screen.dart';
 import 'user_profile_screen.dart';
+import '../components/floating_ai_bubble.dart';
+
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -135,6 +137,15 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               child: _buildCentralFab(),
             ),
           ),
+          
+          // 6. Floating AI Assistant Bubble
+          Positioned(
+            top: 50,
+            right: 20,
+            child: FloatingAIBubble(
+              onTap: () => Navigator.pushNamed(context, '/ai_assistant'),
+            ),
+          ),
         ],
       ),
     );
@@ -185,7 +196,7 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
         const spread = 135.0;
         // Angles for a symmetric 6-point radial layout
         const double top = -math.pi / 2;
-        const double step = (2 * math.pi) / 7;
+        const double step = (2 * math.pi) / 8;
 
         double bx(double angle) => centerX + math.cos(angle) * (spread * val);
         double by(double angle) => centerY - math.sin(angle) * (spread * val);
@@ -217,21 +228,27 @@ class _MainLayoutState extends State<MainLayout> with TickerProviderStateMixin {
               Icons.description_rounded, const Color(0xFFFF2D55), 'GASTO', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/expense'); }
             ),
-            // PROVEEDORES (Orange)
+            // PAPELERA / INACTIVOS (Yellowish Grey)
             _buildGlassBubble(
               bx(top + 4 * step), by(top + 4 * step), 
+              Icons.delete_sweep_rounded, Colors.white60, 'INACTIVOS', val, 
+              () { _toggleMenu(); Navigator.pushNamed(context, '/inactive_products'); }
+            ),
+            // PROVEEDORES (Orange)
+            _buildGlassBubble(
+              bx(top + 5 * step), by(top + 5 * step), 
               Icons.business_rounded, const Color(0xFFFF9100), 'PROVEEDORES', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/suppliers'); }
             ),
             // HISTORIAL (Purple)
             _buildGlassBubble(
-              bx(top + 5 * step), by(top + 5 * step), 
+              bx(top + 6 * step), by(top + 6 * step), 
               Icons.history_rounded, const Color(0xFFB388FF), 'HISTORIAL', val, 
               () { _toggleMenu(); Navigator.pushNamed(context, '/expense_history'); }
             ),
             // ESCANEAR (Yellow)
             _buildGlassBubble(
-              bx(top + 6 * step), by(top + 6 * step), 
+              bx(top + 7 * step), by(top + 7 * step), 
               Icons.qr_code_scanner_rounded, const Color(0xFFFFD600), 'ESCANEAR', val, 
               () { _toggleMenu(); } // Logic for scanner
             ),

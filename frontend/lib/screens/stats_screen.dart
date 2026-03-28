@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math' as math;
 import '../components/glass_card.dart';
+import '../services/sales_service.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -19,56 +19,110 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   final Color _limeNeon = const Color(0xFF8CFF00);
   final Color _cyanNeon = const Color(0xFF00FBFF);
   final Color _magentaNeon = const Color(0xFFFF00FF);
-  bool _isLoading = false;
+  
+  bool _isLoading = true;
   int _selectedDayIndex = -1;
+  final SalesService _salesService = SalesService();
 
-  // Dynamic Data Structures
   final List<String> _days = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
   final List<String> _months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
   final List<String> _hours = List.generate(24, (i) => '${i}h');
 
-  // Improved Mock Data
-  late Map<int, double> _currentChartData;
-  late List<String> _currentLabels;
-
-  final Map<int, double> _weeklyData = {0: 1200, 1: 1800, 2: 1500, 3: 2000, 4: 1100, 5: 2500, 6: 3000};
-  final Map<int, double> _dailyData = {8: 200, 10: 450, 12: 800, 14: 600, 16: 1200, 18: 900, 20: 300}; // Segments by hour
-  final Map<int, double> _monthlyData = {0: 15000, 1: 18000, 2: 21000, 3: 16000, 4: 25000, 5: 32000, 6: 45000, 7: 38000, 8: 41000, 9: 48000, 10: 52000, 11: 55000};
+  late Map<int, double> _currentChartData = {};
+  late List<String> _currentLabels = [];
+  Map<String, dynamic> _rawStats = {};
+  double _chartMaxY = 5000;
 
   @override
   void initState() {
     super.initState();
-    _currentChartData = _weeklyData;
-    _currentLabels = _days;
+    _loadSalesData();
   }
 
-  void _onTimeRangeChanged(String newRange) async {
+  Future<void> _loadSalesData() async {
+    setState(() => _isLoading = true);
+    final stats = await _salesService.getSalesStats();
+    if (mounted) {
+      setState(() {
+        _rawStats = stats;
+        _setupChartData();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _setupChartData() {
+    if (_timeRange == 'DIARIO') {
+      final now = DateTime.now();
+      _currentLabels = [];
+      _currentChartData = {};
+      final dailyMap = _rawStats['dailyStats'] as Map<DateTime, double>? ?? {};
+      
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        final label = _getShortDayName(date.weekday);
+        _currentLabels.add(label);
+        final dayOnly = DateTime(date.year, date.month, date.day);
+        _currentChartData[6 - i] = dailyMap[dayOnly] ?? 0.0;
+      }
+    } else if (_timeRange == 'SEMANAL') {
+      final now = DateTime.now();
+      _currentLabels = [];
+      _currentChartData = {};
+      final dailyMap = _rawStats['dailyStats'] as Map<DateTime, double>? ?? {};
+
+      for (int i = 6; i >= 0; i--) {
+        final weekAgo = now.subtract(Duration(days: i * 7));
+        final weekStart = weekAgo.subtract(Duration(days: weekAgo.weekday - 1));
+        final monthStr = _months[weekStart.month - 1];
+        _currentLabels.add('${weekStart.day} $monthStr');
+
+        double weekTotal = 0;
+        for (int d = 0; d < 7; d++) {
+          final curr = weekStart.add(Duration(days: d));
+          final dayOnly = DateTime(curr.year, curr.month, curr.day);
+          weekTotal += dailyMap[dayOnly] ?? 0.0;
+        }
+        _currentChartData[6-i] = weekTotal;
+      }
+    } else {
+      _currentLabels = _months;
+      _currentChartData = {};
+      final dailyMap = _rawStats['dailyStats'] as Map<DateTime, double>? ?? {};
+      for (var entry in dailyMap.entries) {
+        if (entry.key.year == DateTime.now().year) {
+          int mIdx = entry.key.month - 1;
+          _currentChartData[mIdx] = (_currentChartData[mIdx] ?? 0) + entry.value;
+        }
+      }
+    }
+
+    double maxVal = 1000;
+    _currentChartData.forEach((k, v) { if (v > maxVal) maxVal = v; });
+    _chartMaxY = maxVal * 1.2;
+  }
+
+  String _getShortDayName(int weekday) {
+    switch(weekday) {
+      case 1: return 'LUN'; case 2: return 'MAR'; case 3: return 'MIÉ';
+      case 4: return 'JUE'; case 5: return 'VIE'; case 6: return 'SÁB';
+      default: return 'DOM';
+    }
+  }
+
+  void _onTimeRangeChanged(String newRange) {
     if (_timeRange == newRange) return;
     setState(() {
       _timeRange = newRange;
-      _isLoading = true;
-      _selectedDayIndex = -1; // Reset selection
-      
-      // Update dynamic data
-      if (newRange == 'DIARIO') {
-        _currentChartData = _dailyData;
-        _currentLabels = _hours;
-      } else if (newRange == 'SEMANAL') {
-        _currentChartData = _weeklyData;
-        _currentLabels = _days;
-      } else {
-        _currentChartData = _monthlyData;
-        _currentLabels = _months;
-      }
+      _selectedDayIndex = -1;
+      _setupChartData();
     });
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Background managed by MainLayout
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -94,7 +148,7 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                         ],
                       ),
                     ),
-                    const SizedBox(height: 120), // Bottom nav padding
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
@@ -159,26 +213,24 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildExportButton() {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Generando Reporte...', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)), 
-            backgroundColor: _cyanNeon.withOpacity(0.9),
-            behavior: SnackBarBehavior.floating,
-          )
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: _cardBg,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Icon(Icons.download_rounded, color: _cyanNeon, size: 22),
-      ),
+  void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white10)),
+        title: Text('ACTUALIZACIÓN REMOTA', style: GoogleFonts.orbitron(color: _cyanNeon, fontSize: 16)),
+        content: Text('¿Desea buscar y descargar la última versión del APK?', style: GoogleFonts.spaceGrotesk(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+            }, 
+            child: Text('ACTUALIZAR', style: GoogleFonts.orbitron(color: _cyanNeon, fontWeight: FontWeight.bold))
+          ),
+        ],
+      )
     );
   }
 
@@ -225,28 +277,12 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   }
 
   Widget _buildRevenueChart() {
-    double totalRevenue = 42500.0;
-    String displayLabel = 'INGRESOS SEMANALES';
+    double totalRevenue = _rawStats['revenue'] ?? 0.0;
+    String displayLabel = 'INGRESOS TOTALES';
     
     if (_selectedDayIndex != -1) {
-      if (_timeRange == 'SEMANAL') {
-        totalRevenue = _weeklyData[_selectedDayIndex] ?? 0.0;
-        displayLabel = 'INGRESOS ${_days[_selectedDayIndex]}';
-      } else if (_timeRange == 'MENSUAL') {
-        totalRevenue = _monthlyData[_selectedDayIndex] ?? 0.0;
-        displayLabel = 'INGRESOS ${_months[_selectedDayIndex]}';
-      } else {
-        totalRevenue = _dailyData[_selectedDayIndex] ?? 0.0;
-        displayLabel = 'VENDIDO A LAS ${_hours[_selectedDayIndex]}';
-      }
-    } else {
-      if (_timeRange == 'MENSUAL') {
-        totalRevenue = 485000.0;
-        displayLabel = 'INGRESOS ANUALES TOTALES';
-      } else if (_timeRange == 'DIARIO') {
-        totalRevenue = 4450.0;
-        displayLabel = 'INGRESOS DEL DÍA';
-      }
+      totalRevenue = _currentChartData[_selectedDayIndex] ?? 0.0;
+      displayLabel = 'INGRESOS ${_currentLabels[_selectedDayIndex]}';
     }
 
     return GlassCard(
@@ -280,39 +316,17 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '\$${totalRevenue.toStringAsFixed(2)}', 
-                style: GoogleFonts.orbitron(
-                  fontSize: 28, 
-                  fontWeight: FontWeight.w900, 
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 20),
-                    Shadow(color: _cyanNeon.withOpacity(0.3), blurRadius: 40),
-                  ]
-                )
-              ),
-              if (_selectedDayIndex == -1)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B3B2B).withOpacity(0.4), 
-                    borderRadius: BorderRadius.circular(12), 
-                    border: Border.all(color: _limeNeon.withOpacity(0.2))
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.trending_up_rounded, color: _limeNeon, size: 14),
-                      const SizedBox(width: 4),
-                      Text('+12.5%', style: GoogleFonts.spaceGrotesk(color: _limeNeon, fontSize: 11, fontWeight: FontWeight.w900)),
-                    ],
-                  ),
-                )
-            ],
+          Text(
+            '\$${totalRevenue.toStringAsFixed(2)}', 
+            style: GoogleFonts.orbitron(
+              fontSize: 28, 
+              fontWeight: FontWeight.w900, 
+              color: Colors.white,
+              shadows: [
+                Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 20),
+                Shadow(color: _cyanNeon.withOpacity(0.3), blurRadius: 40),
+              ]
+            )
           ),
           const SizedBox(height: 38),
           SizedBox(
@@ -320,11 +334,8 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceBetween,
-                maxY: 4000,
+                maxY: _chartMaxY,
                 barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) => null,
-                  ),
                   touchCallback: (event, response) {
                     if (event is FlTapUpEvent && response != null && response.spot != null) {
                       setState(() {
@@ -339,18 +350,16 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      interval: _timeRange == 'DIARIO' ? 4 : 1, // Only show some hours to avoid clutter
                       getTitlesWidget: (value, meta) {
                         int index = value.toInt();
                         if (index < 0 || index >= _currentLabels.length) return const SizedBox();
-                        
                         return Padding(
                           padding: const EdgeInsets.only(top: 12.0),
                           child: Text(
                             _currentLabels[index],
                             style: GoogleFonts.spaceGrotesk(
                               color: _selectedDayIndex == index ? _cyanNeon : Colors.white24, 
-                              fontSize: 9, 
+                              fontSize: 7, 
                               fontWeight: FontWeight.w900
                             ),
                           ),
@@ -368,20 +377,14 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                   final isSelected = _selectedDayIndex == i;
                   final double value = _currentChartData[i] ?? 0.0;
                   final color = isSelected ? _cyanNeon : ((i % 3 == 0) ? _magentaNeon : _cyanNeon.withOpacity(0.5));
-                  
                   return BarChartGroupData(
                     x: i,
                     barRods: [
                       BarChartRodData(
                         toY: value,
                         color: color,
-                        width: _timeRange == 'MENSUAL' ? 8 : (_timeRange == 'DIARIO' ? 4 : 14),
+                        width: 10,
                         borderRadius: const BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: _timeRange == 'MENSUAL' ? 60000 : 4000,
-                          color: Colors.white.withOpacity(0.04),
-                        ),
                       ),
                     ],
                   );
@@ -395,35 +398,21 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   }
 
   Widget _buildKpiSection() {
-    String benefit = '\$12.4K';
-    String units = '856';
-    String returns = '42%';
-    String bGrowth = '+8%';
-    String uGrowth = '+15%';
-    String rGrowth = '-2%';
-
-    if (_selectedDayIndex != -1) {
-      final double rev = _currentChartData[_selectedDayIndex] ?? 0.0;
-      benefit = '\$${(rev * 0.35).toStringAsFixed(0)}'; // Estimated 35% benefit
-      units = (rev / 15).toStringAsFixed(0); // Estimated units
-      returns = '${(rev % 5).toStringAsFixed(1)}%';
-      bGrowth = 'REF';
-      uGrowth = 'REF';
-      rGrowth = 'REF';
-    }
-
+    double totalRev = _rawStats['revenue'] ?? 0.0;
+    int totalUnits = _rawStats['units'] ?? 0;
     return Row(
       children: [
-        Expanded(child: KpiCard(title: 'BENEFICIOS', value: benefit, growth: bGrowth, color: _cyanNeon)),
+        Expanded(child: KpiCard(title: 'INGRESOS', value: '\$${totalRev.toStringAsFixed(1)}', growth: '+12%', color: _cyanNeon)),
         const SizedBox(width: 12),
-        Expanded(child: KpiCard(title: 'UNIDADES', value: units, growth: uGrowth, color: _limeNeon)),
+        Expanded(child: KpiCard(title: 'UNIDADES', value: '$totalUnits', growth: '+8%', color: _limeNeon)),
         const SizedBox(width: 12),
-        Expanded(child: KpiCard(title: 'RETORNOS', value: returns, growth: rGrowth, color: _magentaNeon)),
+        Expanded(child: KpiCard(title: 'RETORNOS', value: '2%', growth: '-1%', color: _magentaNeon)),
       ],
     );
   }
 
   Widget _buildTopCategories() {
+    final tops = _rawStats['topCategories'] as List? ?? [];
     return GlassCard(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -439,41 +428,35 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
               Expanded(
                 child: SizedBox(
                   height: 120,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      PieChart(
-                        PieChartData(
-                          sectionsSpace: 6,
-                          centerSpaceRadius: 40,
-                          sections: [
-                            PieChartSectionData(color: _cyanNeon, value: 60, title: '', radius: 14, showTitle: false),
-                            PieChartSectionData(color: _magentaNeon, value: 28, title: '', radius: 14, showTitle: false),
-                            PieChartSectionData(color: _limeNeon, value: 12, title: '', radius: 14, showTitle: false),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('74%', style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
-                          Text('CRECIMIENTO', style: GoogleFonts.spaceGrotesk(fontSize: 8, color: Colors.white38, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                        ],
-                      ),
-                    ],
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 6,
+                      centerSpaceRadius: 40,
+                      sections: tops.isEmpty ? [
+                        PieChartSectionData(color: Colors.white10, value: 100, radius: 14, showTitle: false),
+                      ] : List.generate(tops.length, (i) {
+                        final colors = [_cyanNeon, _magentaNeon, _limeNeon];
+                        return PieChartSectionData(
+                          color: colors[i % colors.length], 
+                          value: (tops[i]['value'] as num).toDouble(), 
+                          radius: 14, 
+                          showTitle: false
+                        );
+                      }),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 24),
               Expanded(
                 child: Column(
-                    children: [
-                       _buildLegendItem('Electrónica', '60%', _cyanNeon),
-                       const SizedBox(height: 18),
-                       _buildLegendItem('Accesorios', '28%', _magentaNeon),
-                       const SizedBox(height: 18),
-                       _buildLegendItem('Audio', '12%', _limeNeon),
-                    ],
+                    children: List.generate(tops.length, (i) {
+                      final colors = [_cyanNeon, _magentaNeon, _limeNeon];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildLegendItem(tops[i]['name'], '${(tops[i]['value'] as num).toInt()}', colors[i % colors.length]),
+                      );
+                    }),
                 ),
               )
             ],
@@ -486,12 +469,9 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   Widget _buildLegendItem(String title, String percent, Color color) {
     return Row(
       children: [
-        Container(
-          width: 8, height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 10),
-        Text(title, style: GoogleFonts.spaceGrotesk(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+        Text(title, style: GoogleFonts.spaceGrotesk(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w900)),
         const Spacer(),
         Text(percent, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)),
       ],
@@ -520,16 +500,9 @@ class KpiCard extends StatelessWidget {
         children: [
           Text(title, style: GoogleFonts.spaceGrotesk(color: color, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
           const SizedBox(height: 16),
-          Text(value, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+          Text(value, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 10),
-          Text(
-            growth, 
-            style: GoogleFonts.spaceGrotesk(
-              color: growth.contains('+') ? const Color(0xFF8CFF00) : const Color(0xFFFF2D55), 
-              fontSize: 12, 
-              fontWeight: FontWeight.w900
-            )
-          ),
+          Text(growth, style: GoogleFonts.spaceGrotesk(color: growth.contains('+') ? const Color(0xFF8CFF00) : const Color(0xFFFF2D55), fontSize: 12, fontWeight: FontWeight.w900)),
         ],
       ),
     );

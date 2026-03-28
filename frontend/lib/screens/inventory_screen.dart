@@ -246,25 +246,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: GlassCard(
-            onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: p),
+            onTap: () async {
+              final result = await Navigator.pushNamed(context, '/product_detail', arguments: p);
+              if (result == true) _loadProducts(); // Refresh if something deleted
+            },
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 60, height: 60,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1B1E1B),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.05)),
-                      ),
-                      child: Center(
-                        child: Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 24),
-                      ),
+                    Column(
+                      children: [
+                        Container(
+                          width: 75, height: 75,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1B1E1B),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                              ? Image.network(p.imageUrl!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.shopping_bag_rounded, color: Colors.white38))
+                              : const Center(child: Icon(Icons.shopping_bag_rounded, color: Colors.white38, size: 24)),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'STOCK: ${p.stock}',
+                          style: GoogleFonts.spaceGrotesk(
+                            color: p.statusColor, 
+                            fontSize: 10, 
+                            fontWeight: FontWeight.w900
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 20),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,25 +299,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '\$${p.price.toStringAsFixed(2)}', 
+                            'COP ${p.price.toStringAsFixed(0)}', // Unified format
                             style: GoogleFonts.spaceGrotesk(color: _cyanNeon, fontWeight: FontWeight.w900, fontSize: 15)
                           ),
                         ],
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'STOCK', 
-                          style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.w900)
-                        ),
-                        Text(
-                          '${p.stock}', 
-                          style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)
-                        ),
-                      ],
-                    )
                   ],
                 ),
                 const SizedBox(height: 20),

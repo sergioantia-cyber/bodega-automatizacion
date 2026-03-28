@@ -109,9 +109,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final double price = double.tryParse(_saleController.text) ?? 0.0;
-      final int stock = int.tryParse(_stockController.text) ?? 0;
-      final double costPrice = double.tryParse(_costController.text) ?? 0.0;
+      // Remover puntos y comas antes de parsear para evitar errores de locales (ej: 11.500 -> 11500)
+      final String sanitizedSale = _saleController.text.replaceAll('.', '').replaceAll(',', '');
+      final String sanitizedCost = _costController.text.replaceAll('.', '').replaceAll(',', '');
+      
+      final double price = double.tryParse(sanitizedSale) ?? 0.0;
+      final double costPrice = double.tryParse(sanitizedCost) ?? 0.0;
+      final int stock = int.tryParse(_stockController.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
 
       final product = Product(
         name: _nameController.text,

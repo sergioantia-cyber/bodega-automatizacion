@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../components/glass_card.dart';
+import '../models/product.dart';
+import '../services/product_service.dart';
 import 'edit_product_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -12,6 +14,13 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  // Colores neón consistentes con el resto de la app
+  final Color _darkBg = const Color(0xFF070907);
+  final Color _cardBg = const Color(0xFF141714);
+  final Color _limeNeon = const Color(0xFF8CFF00);
+  final Color _cyanNeon = const Color(0xFF00FBFF);
+  final Color _magentaNeon = const Color(0xFFFF00FF);
+
   // Dynamic data would normally be passed via arguments
   final Map<String, dynamic> product = {
     'name': 'Sony WH-1000XM4',
@@ -24,16 +33,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     'margin': '44.1%',
   };
 
-  final Color darkBg = const Color(0xFF070907);
-  final Color cardBg = const Color(0xFF141714);
-  final Color limeNeon = const Color(0xFF8CFF00);
-  final Color cyanNeon = const Color(0xFF00FBFF);
-  final Color magentaNeon = const Color(0xFFFF00FF);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: _darkBg,
       body: SafeArea(
         child: Column(
           children: [
@@ -45,17 +48,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 10),
-                    _buildProductImage(cyanNeon),
+                    _buildProductImage(_cyanNeon),
                     const SizedBox(height: 32),
-                    _buildProductTitle(product['name'], product['sku'], magentaNeon),
+                    _buildProductTitle(product['name'], product['sku'], _magentaNeon),
                     const SizedBox(height: 32),
-                    _buildStockStatusCard(product, limeNeon),
+                    _buildStockStatusCard(product, _limeNeon),
                     const SizedBox(height: 24),
-                    _buildKpiBubbles(product, cyanNeon, magentaNeon, limeNeon),
+                    _buildKpiBubbles(product, _cyanNeon, _magentaNeon, _limeNeon),
                     const SizedBox(height: 32),
-                    _buildStockHistoryHeader(cyanNeon),
+                    _buildStockHistoryHeader(_cyanNeon),
                     const SizedBox(height: 16),
-                    _buildStockHistoryList(cyanNeon, magentaNeon, limeNeon),
+                    _buildStockHistoryList(_cyanNeon, _magentaNeon, _limeNeon),
                     const SizedBox(height: 100), // Spacing for buttons
                   ],
                 ),
@@ -64,7 +67,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
       ),
-      bottomSheet: _buildBottomActions(context, cyanNeon, limeNeon),
+      bottomSheet: _buildBottomActions(context, _cyanNeon, _limeNeon),
     );
   }
 
@@ -76,7 +79,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF00FBFF), size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: _cyanNeon, size: 20),
           ),
           Text(
             'Detalles de Producto',
@@ -87,8 +90,53 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF00FBFF)),
+            onPressed: () {
+              _showDeleteConfirmation(context);
+            },
+            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF2D55)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Colors.white10),
+        ),
+        title: Text('¿ELIMINAR PRODUCTO?', 
+          style: GoogleFonts.orbitron(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
+        content: Text('Esta acción desactivará el producto del inventario.', 
+          style: GoogleFonts.spaceGrotesk(color: Colors.white54, fontSize: 12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('CANCELAR', style: GoogleFonts.spaceGrotesk(color: Colors.white24)),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                final ProductService productService = ProductService();
+                final dynamic args = ModalRoute.of(context)!.settings.arguments;
+                if (args is Product && args.id != null) {
+                  await productService.deleteProduct(args.id!);
+                  if (context.mounted) {
+                    Navigator.pop(dialogContext);
+                    Navigator.pop(context, true);
+                  }
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al eliminar: $e'))
+                );
+              }
+            },
+            child: Text('ELIMINAR', style: GoogleFonts.spaceGrotesk(color: const Color(0xFFFF2D55), fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -338,7 +386,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildBottomActions(BuildContext context, Color cyan, Color lime) {
     return Container(
       padding: const EdgeInsets.all(24),
-      color: const Color(0xFF070907),
+      color: _darkBg,
       child: Row(
         children: [
           Expanded(
@@ -409,7 +457,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               child: Column(
                 children: [
-                  // Fixed Handle and Header
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                     child: Column(
@@ -447,13 +494,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
 
-                  // Scrollable Body
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
                       children: [
                         const SizedBox(height: 16),
-                        // Toggle Buttons
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
@@ -484,7 +529,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // Info Cards
                         Row(
                           children: [
                             Expanded(
@@ -498,7 +542,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   'STOCK TOTAL',
                                   product['optimalLevel'].toString(),
                                   '✏️ TOCA PARA EDITAR',
-                                  limeNeon,
+                                  _limeNeon,
                                   isEditable: true,
                                 ),
                               ),
@@ -506,17 +550,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 32),
-                        // Adjustment Value
                         Center(
                           child: Column(
                             children: [
                               Text(
                                 adjustmentAmount,
                                 style: GoogleFonts.orbitron(
-                                  color: limeNeon,
+                                  color: _limeNeon,
                                   fontSize: 64,
                                   fontWeight: FontWeight.w900,
-                                  shadows: [Shadow(color: limeNeon.withOpacity(0.8), blurRadius: 40)],
+                                  shadows: [Shadow(color: _limeNeon.withOpacity(0.8), blurRadius: 40)],
                                 ),
                               ),
                               Text(
@@ -532,7 +575,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // numeric Keypad
                         _buildNumericKeypad(setModalState, (val) {
                           setModalState(() {
                             if (val == 'back') {
@@ -551,7 +593,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           });
                         }),
                         const SizedBox(height: 32),
-                        // Confirm Button
                         GestureDetector(
                           onTap: () {
                             setState(() {
@@ -563,9 +604,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             width: double.infinity,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: limeNeon,
+                              color: _limeNeon,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: limeNeon.withOpacity(0.3), blurRadius: 20)],
+                              boxShadow: [BoxShadow(color: _limeNeon.withOpacity(0.3), blurRadius: 20)],
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -617,7 +658,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: selected ? limeNeon : Colors.white24, size: 18),
+            Icon(icon, color: selected ? _limeNeon : Colors.white24, size: 18),
             const SizedBox(width: 8),
             Text(
               label,
@@ -637,9 +678,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isEditable ? limeNeon.withOpacity(0.05) : Colors.white.withOpacity(0.03),
+        color: isEditable ? _limeNeon.withOpacity(0.05) : Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isEditable ? limeNeon.withOpacity(0.3) : highlight.withOpacity(0.1)),
+        border: Border.all(color: isEditable ? _limeNeon.withOpacity(0.3) : highlight.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -652,7 +693,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 style: GoogleFonts.spaceGrotesk(color: highlight.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w900),
               ),
               if (isEditable)
-                Icon(Icons.edit_rounded, color: limeNeon.withOpacity(0.5), size: 14),
+                Icon(Icons.edit_rounded, color: _limeNeon.withOpacity(0.5), size: 14),
             ],
           ),
           const SizedBox(height: 8),
@@ -687,17 +728,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          backgroundColor: const Color(0xFF141714),
+          backgroundColor: _cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: limeNeon.withOpacity(0.3)),
+            side: BorderSide(color: _limeNeon.withOpacity(0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.inventory_rounded, color: limeNeon, size: 36),
+                Icon(Icons.inventory_rounded, color: _limeNeon, size: 36),
                 const SizedBox(height: 16),
                 Text(
                   'STOCK MÁXIMO DESEADO',
@@ -722,7 +763,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: limeNeon.withOpacity(0.3)),
+                    border: Border.all(color: _limeNeon.withOpacity(0.3)),
                   ),
                   child: TextField(
                     controller: controller,
@@ -730,7 +771,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.orbitron(
-                      color: limeNeon,
+                      color: _limeNeon,
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
                     ),
@@ -786,9 +827,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         child: Container(
                           height: 48,
                           decoration: BoxDecoration(
-                            color: limeNeon,
+                            color: _limeNeon,
                             borderRadius: BorderRadius.circular(14),
-                            boxShadow: [BoxShadow(color: limeNeon.withOpacity(0.3), blurRadius: 12)],
+                            boxShadow: [BoxShadow(color: _limeNeon.withOpacity(0.3), blurRadius: 12)],
                           ),
                           alignment: Alignment.center,
                           child: Text(
@@ -888,4 +929,3 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 }
-

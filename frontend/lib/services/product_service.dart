@@ -12,6 +12,7 @@ class ProductService {
           .from('productos')
           .select()
           .eq('negocio', 'MINIMARKET')
+          .eq('activo', true)
           .order('nombre', ascending: true);
       
       return (response as List).map((json) => Product.fromJson(json)).toList();
@@ -29,11 +30,29 @@ class ProductService {
           .select()
           .eq('categoria', category)
           .eq('negocio', 'MINIMARKET')
+          .eq('activo', true)
           .order('nombre', ascending: true);
       
       return (response as List).map((json) => Product.fromJson(json)).toList();
     } catch (e) {
       print('Error fetching products by category: $e');
+      rethrow;
+    }
+  }
+
+  // READ - Get INACTIVE products (Recycle Bin)
+  Future<List<Product>> getInactiveProducts() async {
+    try {
+      final response = await _supabase
+          .from('productos')
+          .select()
+          .eq('negocio', 'MINIMARKET')
+          .eq('activo', false)
+          .order('nombre', ascending: true);
+      
+      return (response as List).map((json) => Product.fromJson(json)).toList();
+    } catch (e) {
+      print('Error fetching inactive products: $e');
       rethrow;
     }
   }
@@ -71,16 +90,41 @@ class ProductService {
     }
   }
 
-  // DELETE - Delete or deactivate product
+  // DELETE - Deactivate product (soft delete)
   Future<void> deleteProduct(String id) async {
     try {
-      // Preferring deactivation for data integrity
       await _supabase
           .from('productos')
           .update({'activo': false})
           .eq('id', id);
     } catch (e) {
-      print('Error deleting product: $e');
+      print('Error deactivating product: $e');
+      rethrow;
+    }
+  }
+
+  // UPDATE - Restore deactivated product
+  Future<void> restoreProduct(String id) async {
+    try {
+      await _supabase
+          .from('productos')
+          .update({'activo': true})
+          .eq('id', id);
+    } catch (e) {
+      print('Error restoring product: $e');
+      rethrow;
+    }
+  }
+
+  // DELETE - Permanent deletion (hard delete)
+  Future<void> permanentlyDeleteProduct(String id) async {
+    try {
+      await _supabase
+          .from('productos')
+          .delete()
+          .eq('id', id);
+    } catch (e) {
+      print('Error permanently deleting product: $e');
       rethrow;
     }
   }
@@ -92,6 +136,7 @@ class ProductService {
           .from('productos')
           .select()
           .eq('negocio', 'MINIMARKET')
+          .eq('activo', true)
           .or('nombre.ilike.%$query%,codigo_barras.ilike.%$query%')
           .order('nombre', ascending: true);
       
@@ -155,6 +200,7 @@ class ProductService {
           .select()
           .eq('codigo_barras', barcode)
           .eq('negocio', 'MINIMARKET')
+          .eq('activo', true)
           .maybeSingle();
       
       if (response == null) return null;

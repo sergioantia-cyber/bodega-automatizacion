@@ -16,6 +16,9 @@ import 'screens/suppliers_screen.dart';
 import 'screens/cash_management_screen.dart';
 import 'screens/clients_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/ai_assistant_screen.dart';
+import 'screens/inactive_products_screen.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +80,16 @@ class _PosUrenaAppState extends State<PosUrenaApp> {
           displayColor: Colors.white,
         ),
       ),
+      builder: (context, child) {
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            // Cierra el teclado globalmente al tocar fuera de un campo de texto
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: child,
+        );
+      },
       initialRoute: _isAuthenticated ? '/' : '/login',
       routes: {
         '/': (context) => const MainLayout(),
@@ -93,7 +106,8 @@ class _PosUrenaAppState extends State<PosUrenaApp> {
         '/suppliers': (context) => const SuppliersScreen(),
         '/cash_management': (context) => const CashManagementScreen(),
         '/clients': (context) => const ClientsScreen(),
-        // TODO: Agregar rutas de Reportes
+        '/ai_assistant': (context) => const AIAssistantScreen(),
+        '/inactive_products': (context) => const InactiveProductsScreen(),
       },
     );
   }
