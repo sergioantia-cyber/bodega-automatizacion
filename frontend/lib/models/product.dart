@@ -14,6 +14,7 @@ class Product {
   final String abcCategory;
   final String? imageUrl;
   final bool active;
+  final String negocio;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -31,6 +32,7 @@ class Product {
     this.abcCategory = 'C',
     this.imageUrl,
     this.active = true,
+    this.negocio = 'MINIMARKET',
     this.createdAt,
     this.updatedAt,
   });
@@ -51,6 +53,7 @@ class Product {
       'categoria_abc': abcCategory,
       'imagen_url': imageUrl,
       'activo': active,
+      'negocio': negocio,
     };
   }
 
@@ -64,12 +67,13 @@ class Product {
       category: json['categoria'] ?? 'General',
       price: (json['precio_venta'] as num?)?.toDouble() ?? 0.0,
       cost: (json['costo_compra'] as num?)?.toDouble() ?? 0.0,
-      stock: json['stock_actual'] ?? 0,
-      maxStock: json['stock_maximo'] ?? 100,
-      minAlert: json['alerta_minima'] ?? 5,
+      stock: (json['stock_actual'] as num?)?.toInt() ?? 0,
+      maxStock: (json['stock_maximo'] as num?)?.toInt() ?? 100,
+      minAlert: (json['alerta_minima'] as num?)?.toInt() ?? 5,
       abcCategory: json['categoria_abc'] ?? 'C',
       imageUrl: json['imagen_url'],
       active: json['activo'] ?? true,
+      negocio: json['negocio'] ?? 'MINIMARKET',
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
     );

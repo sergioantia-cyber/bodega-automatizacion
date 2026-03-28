@@ -2,6 +2,7 @@ export interface Producto {
   id: string
   nombre: string
   descripcion: string
+  referencia: string
   precio_venta: number
   costo_compra: number
   stock_actual: number
@@ -12,6 +13,7 @@ export interface Producto {
   genero?: string
   talla?: string
   color?: string
+  linea_diseno?: string
 }
 
 export interface CartItem extends Producto {

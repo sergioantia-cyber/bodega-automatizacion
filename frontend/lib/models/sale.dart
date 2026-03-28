@@ -95,7 +95,7 @@ class SaleItem {
       saleId: json['id_venta'],
       productId: json['id_producto'],
       productName: json['nombre_producto'],
-      quantity: json['cantidad'] ?? 1,
+      quantity: (json['cantidad'] as num?)?.toInt() ?? 1,
       unitPrice: (json['precio_unitario'] as num?)?.toDouble() ?? 0.0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
     );

@@ -210,7 +210,7 @@ class _EditProductScreenState extends State<EditProductScreen> with TickerProvid
                           children: [
                             Expanded(child: _buildCategoryDropdown()),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildNeonTextField('PRECIO (USD)', _priceController, limeNeon, prefixText: '\$ ')),
+                            Expanded(child: _buildNeonTextField('PRECIO', _priceController, limeNeon, prefixText: 'COP ')),
                           ],
                         ),
                         const SizedBox(height: 48),

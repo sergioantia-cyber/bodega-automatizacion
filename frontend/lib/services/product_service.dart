@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 
@@ -10,6 +11,7 @@ class ProductService {
       final response = await _supabase
           .from('productos')
           .select()
+          .eq('negocio', 'MINIMARKET')
           .order('nombre', ascending: true);
       
       return (response as List).map((json) => Product.fromJson(json)).toList();
@@ -26,6 +28,7 @@ class ProductService {
           .from('productos')
           .select()
           .eq('categoria', category)
+          .eq('negocio', 'MINIMARKET')
           .order('nombre', ascending: true);
       
       return (response as List).map((json) => Product.fromJson(json)).toList();
@@ -38,9 +41,12 @@ class ProductService {
   // CREATE - Add new product
   Future<Product> addProduct(Product product) async {
     try {
+      final data = product.toJson();
+      data['negocio'] = 'MINIMARKET'; // Asegurar que se guarde en el inventario correcto
+      
       final response = await _supabase
           .from('productos')
-          .insert(product.toJson())
+          .insert(data)
           .select()
           .single();
       
@@ -85,6 +91,7 @@ class ProductService {
       final response = await _supabase
           .from('productos')
           .select()
+          .eq('negocio', 'MINIMARKET')
           .or('nombre.ilike.%$query%,codigo_barras.ilike.%$query%')
           .order('nombre', ascending: true);
       
@@ -100,16 +107,17 @@ class ProductService {
     try {
       final product = await _supabase
           .from('productos')
-          .select('stock')
+          .select('stock_actual')
           .eq('id', productId)
+          .eq('negocio', 'MINIMARKET')
           .single();
       
-      double currentStock = (product['stock'] as num).toDouble();
+      double currentStock = (product['stock_actual'] as num).toDouble();
       double newStock = currentStock - quantity;
 
       await _supabase
           .from('productos')
-          .update({'stock': (newStock < 0) ? 0.0 : newStock})
+          .update({'stock_actual': (newStock < 0) ? 0.0 : newStock})
           .eq('id', productId);
     } catch (e) {
       print('Error decrementing stock: $e');
@@ -136,6 +144,42 @@ class ProductService {
     } catch (e) {
       print('Error fetching categories: $e');
       return [];
+    }
+  }
+
+  // READ - Get specific product by barcode
+  Future<Product?> getProductByBarcode(String barcode) async {
+    try {
+      final response = await _supabase
+          .from('productos')
+          .select()
+          .eq('codigo_barras', barcode)
+          .eq('negocio', 'MINIMARKET')
+          .maybeSingle();
+      
+      if (response == null) return null;
+      return Product.fromJson(response);
+    } catch (e) {
+      print('Error fetching product by barcode: $e');
+      return null;
+    }
+  }
+
+  // UPLOAD - Upload image to Supabase Storage
+  Future<String?> uploadImage(Uint8List fileBytes, String fileName) async {
+    try {
+      final String path = 'minimarket/$fileName';
+      await _supabase.storage.from('productos').uploadBinary(
+        path,
+        fileBytes,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+      );
+      
+      final String publicUrl = _supabase.storage.from('productos').getPublicUrl(path);
+      return publicUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
     }
   }
 }

@@ -138,9 +138,18 @@ CREATE TABLE movimientos_caja (
 );
 
 -- ============================================
+-- 9. PERFILES DE USUARIO (AUTH)
+-- ============================================
+CREATE TABLE perfiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    nombre TEXT,
+    rol TEXT DEFAULT 'cajero', -- 'admin' o 'cajero'
+    ultimo_acceso TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- POLÍTICAS RLS (Row Level Security)
--- Permitir lectura/escritura pública por ahora
--- (se restringirá cuando se implemente auth)
 -- ============================================
 ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
@@ -150,16 +159,45 @@ ALTER TABLE ventas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ventas_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimientos_caja ENABLE ROW LEVEL SECURITY;
+ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 
--- Políticas temporales: acceso completo con anon key
-CREATE POLICY "Acceso público productos" ON productos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público clientes" ON clientes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público proveedores" ON proveedores FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público sesiones_caja" ON sesiones_caja FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público ventas" ON ventas FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público ventas_items" ON ventas_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público gastos" ON gastos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acceso público movimientos_caja" ON movimientos_caja FOR ALL USING (true) WITH CHECK (true);
+-- Políticas de Lectura (Todos los autenticados)
+CREATE POLICY "Lectura para usuarios autenticados" ON productos FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON clientes FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON proveedores FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON sesiones_caja FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON ventas FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON ventas_items FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON gastos FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura para usuarios autenticados" ON movimientos_caja FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Lectura perfiles autenticados" ON perfiles FOR SELECT TO authenticated USING (true);
+
+-- Políticas de Escritura (Solo Admins para productos/proveedores, Todos para ventas/caja)
+-- Nota: Para simplificar esta demo técnica, permitimos a todos los 'authenticated' escribir, 
+-- pero en producción validaríamos el campo 'rol' de la tabla perfiles via funciones.
+
+CREATE POLICY "Escritura para usuarios autenticados" ON productos FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON clientes FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON proveedores FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON sesiones_caja FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON ventas FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON ventas_items FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON gastos FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escritura para usuarios autenticados" ON movimientos_caja FOR ALL TO authenticated USING (true);
+
+-- Trigger para crear perfil automáticamente al registrarse en Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.perfiles (id, nombre, rol)
+  VALUES (new.id, new.raw_user_meta_data->>'nombre', 'admin'); -- Primer usuario como admin por defecto
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- ============================================
 -- DATOS DE PRUEBA - Productos iniciales

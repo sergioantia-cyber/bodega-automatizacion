@@ -15,6 +15,7 @@ import 'screens/edit_product_screen.dart';
 import 'screens/suppliers_screen.dart';
 import 'screens/cash_management_screen.dart';
 import 'screens/clients_screen.dart';
+import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,12 +25,39 @@ Future<void> main() async {
   const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuaWxucm1hZGtqaHh3ZXVsYmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTc5ODEsImV4cCI6MjA4OTM3Mzk4MX0.gBVNMc_qB5UTyx9VOhVG0DbLVko6PgCu5NiQQW-Foaw';
   
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-
+ 
   runApp(const PosUrenaApp());
 }
 
-class PosUrenaApp extends StatelessWidget {
+class PosUrenaApp extends StatefulWidget {
   const PosUrenaApp({super.key});
+
+  @override
+  State<PosUrenaApp> createState() => _PosUrenaAppState();
+}
+
+class _PosUrenaAppState extends State<PosUrenaApp> {
+  final SupabaseClient _supabase = Supabase.instance.client;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+    _supabase.auth.onAuthStateChange.listen((data) {
+      if (mounted) {
+        setState(() {
+          _isAuthenticated = data.session != null;
+        });
+      }
+    });
+  }
+
+  void _checkAuth() {
+    setState(() {
+      _isAuthenticated = _supabase.auth.currentSession != null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +77,10 @@ class PosUrenaApp extends StatelessWidget {
           displayColor: Colors.white,
         ),
       ),
-      initialRoute: '/',
+      initialRoute: _isAuthenticated ? '/' : '/login',
       routes: {
         '/': (context) => const MainLayout(),
+        '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/inventory': (context) => const InventoryScreen(),
         '/checkout': (context) => const CheckoutScreen(),

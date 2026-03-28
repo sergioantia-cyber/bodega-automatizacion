@@ -222,28 +222,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context, Color cyan, Color lime) {
-    const magentaNeon = Color(0xFFFF00FF);
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionButton('ESCANEAR', Icons.qr_code_scanner_rounded, magentaNeon, () {})),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildActionButton('CATÁLOGO', Icons.local_mall_rounded, cyan, () => _shareCatalog())),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionButton('PEDIDOS', Icons.notifications_active_rounded, magentaNeon, () => Navigator.pushNamed(context, '/online_orders'))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionButton('CLIENTES', Icons.people_alt_rounded, lime, () => Navigator.pushNamed(context, '/clients'))),
-          ],
-        ),
+        Expanded(child: _buildActionButton('VENDER', Icons.shopping_bag_rounded, cyan, () => Navigator.pushNamed(context, '/checkout'))),
+        const SizedBox(width: 12),
+        Expanded(child: _buildActionButton('STOCK', Icons.inventory_2_rounded, lime, () => Navigator.pushNamed(context, '/inventory'))),
+        const SizedBox(width: 12),
+        Expanded(child: _buildActionButton('CLIENTES', Icons.people_alt_rounded, cyan, () => Navigator.pushNamed(context, '/clients'))),
       ],
     );
   }

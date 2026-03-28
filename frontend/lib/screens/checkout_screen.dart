@@ -8,6 +8,13 @@ import '../models/client.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import '../services/client_service.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import '../services/payment_service.dart';
+import '../models/payment_method.dart';
+import 'add_product_screen.dart';
+
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -20,8 +27,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   final ProductService _productService = ProductService();
   final SalesService _salesService = SalesService();
   final ClientService _clientService = ClientService();
+  final PaymentService _paymentService = PaymentService();
 
   final List<Map<String, dynamic>> _cartItems = [];
+  List<PaymentMethod> _dynamicPayments = [];
   Client? _selectedClient;
   
   late AnimationController _laserController;
@@ -32,7 +41,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   String? _selectedPayment;
   bool _isProcessing = false;
   bool _showSuccess = false;
-  String _manualInput = "";
+  int? _editingIndex; // Track index in _cartItems being edited for quantity
+  
+  // Barcode Scanning
+  final MobileScannerController _scannerController = MobileScannerController();
+  final FocusNode _barcodeFocusNode = FocusNode();
+  String _barcodeBuffer = "";
+  DateTime _lastBarcodeKeyTime = DateTime.now();
 
   final Color _darkBg = const Color(0xFF070907);
   final Color _limeNeon = const Color(0xFF8CFF00);
@@ -51,11 +66,84 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
     _laserAnimation = Tween<double>(begin: 10.0, end: 110.0).animate(
       CurvedAnimation(parent: _laserController, curve: Curves.easeInOut),
     );
+
+    // Auto-focus for USB Barcode Reader
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _barcodeFocusNode.requestFocus();
+      _loadPayments();
+    });
+  }
+
+  Future<void> _loadPayments() async {
+     final methods = await _paymentService.getActiveMethods();
+     if (mounted) setState(() => _dynamicPayments = methods);
+  }
+
+  void _onKey(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final now = DateTime.now();
+      // Most scanners send characters rapidly (< 50ms)
+      if (now.difference(_lastBarcodeKeyTime).inMilliseconds > 100) {
+        _barcodeBuffer = ""; // Reset if it's a slow manual type
+      }
+      _lastBarcodeKeyTime = now;
+
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        if (_barcodeBuffer.isNotEmpty) {
+          _handleScannedBarcode(_barcodeBuffer);
+          _barcodeBuffer = "";
+        }
+      } else if (event.character != null) {
+        _barcodeBuffer += event.character!;
+      }
+    }
+  }
+
+  Future<void> _handleScannedBarcode(String code) async {
+    try {
+      final p = await _productService.getProductByBarcode(code);
+      if (p == null) throw Exception('Producto no encontrado');
+      
+      _addProductToCart(p);
+      setState(() {
+        _editingIndex = _cartItems.indexWhere((item) => item['productId'] == p.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('AÑADIDO: ${p.name}', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w900)),
+          backgroundColor: _limeNeon,
+          duration: const Duration(seconds: 1),
+        )
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Código no reconocido: $code', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFFFF2D55),
+          action: SnackBarAction(
+            label: 'AÑADIR',
+            textColor: Colors.white,
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddProductScreen(initialBarcode: code)),
+              );
+              if (result == true) {
+                // If product was added, try identifying it again
+                _handleScannedBarcode(code);
+              }
+            },
+          ),
+        )
+      );
+    }
   }
 
   @override
   void dispose() {
     _laserController.dispose();
+    _scannerController.dispose();
+    _barcodeFocusNode.dispose();
     super.dispose();
   }
 
@@ -95,7 +183,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
     );
   }
 
-  void _showPaymentQR(String provider, Color color) {
+  void _showPaymentQR(PaymentMethod method, Color color) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -105,7 +193,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('PAGAR CON $provider', style: GoogleFonts.orbitron(color: color, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
+              Text('PAGAR CON ${method.bank.toUpperCase()}', style: GoogleFonts.orbitron(color: color, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
+              const SizedBox(height: 8),
+              Text(method.holder.toUpperCase(), style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
               const SizedBox(height: 24),
               Container(
                 width: 200, height: 200,
@@ -116,7 +206,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                   boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 30)],
                 ),
                 child: Image.network(
-                  'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=UreñaPOS_$provider',
+                  method.qrUrl,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return const Center(child: CircularProgressIndicator(color: Colors.black));
@@ -124,12 +214,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                 ),
               ),
               const SizedBox(height: 24),
-              Text('MONTO: \$${_total.toStringAsFixed(2)}', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 14)),
+              Text('MONTO: COP ${_total.toStringAsFixed(0)}', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 4),
               Text('Ureña POS Enterprise', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10)),
               const SizedBox(height: 32),
               GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                   setState(() => _selectedPayment = method.bank);
+                   Navigator.pop(context);
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   decoration: BoxDecoration(
@@ -148,16 +241,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
   }
 
   void _handleNumpadPress(String key) {
-    setState(() {
-      if (key == '<') {
-        if (_manualInput.isNotEmpty) {
-          _manualInput = _manualInput.substring(0, _manualInput.length - 1);
+    if (_editingIndex != null) {
+      setState(() {
+        String currentQtyString = _cartItems[_editingIndex!]['qty'].toString();
+        
+        if (key == '<') {
+          if (currentQtyString.length > 1) {
+             currentQtyString = currentQtyString.substring(0, currentQtyString.length - 1);
+          } else {
+             currentQtyString = "1";
+          }
+        } else if (key == '.') {
+          return; // Quantities are integers
+        } else {
+           if (currentQtyString == "1" || currentQtyString == "0") {
+              currentQtyString = key;
+           } else {
+              currentQtyString += key;
+           }
         }
-      } else {
-        if (key == '.' && _manualInput.contains('.')) return;
-        _manualInput += key;
-      }
-    });
+        
+        int newQty = int.tryParse(currentQtyString) ?? 1;
+        if (newQty <= 0) newQty = 1;
+        _cartItems[_editingIndex!]['qty'] = newQty;
+      });
+    }
   }
 
   Future<void> _processPayment() async {
@@ -271,7 +379,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                         final p = results[index];
                         return ListTile(
                           title: Text(p.name, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text('\$${p.price.toStringAsFixed(2)} - Stock: ${p.stock}', style: GoogleFonts.spaceGrotesk(color: Colors.white38)),
+                          subtitle: Text('COP ${p.price.toStringAsFixed(0)} - Stock: ${p.stock}', style: GoogleFonts.spaceGrotesk(color: Colors.white38)),
                           trailing: IconButton(
                             icon: Icon(Icons.add_circle_rounded, color: _limeNeon),
                             onPressed: () {
@@ -304,6 +412,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
           'price': p.price,
           'qty': 1,
         });
+        _editingIndex = _cartItems.length - 1;
       }
     });
   }
@@ -348,7 +457,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return KeyboardListener(
+      focusNode: _barcodeFocusNode,
+      onKeyEvent: _onKey,
+      autofocus: true,
+      child: Scaffold(
       backgroundColor: _darkBg,
       appBar: AppBar(
         title: Text('CHECKOUT', style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 2.0, fontSize: 18, color: Colors.white)),
@@ -426,8 +539,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+// Removed _onQRViewCreated as MobileScanner handles its own lifecycle and detection.
+// The MobileScanner widget itself is used within _buildScannerSection.
 
   Widget _buildScannerSection() {
     return Padding(
@@ -456,25 +573,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                             'CÁMARA INACTIVA',
                             style: GoogleFonts.orbitron(color: Colors.white10, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '(MODO USB ACTIVO)',
+                            style: GoogleFonts.spaceGrotesk(color: Colors.white.withOpacity(0.05), fontSize: 8),
+                          ),
                         ],
                       ),
                     )
                   else
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            colors: [Colors.white.withOpacity(0.05), Colors.transparent],
-                            radius: 1.0,
-                          ),
-                        ),
-                        child: Center(
-                          child: Opacity(
-                            opacity: 0.1,
-                            child: Icon(Icons.barcode_reader, size: 80, color: Colors.white),
-                          ),
-                        ),
-                      ),
+                    MobileScanner(
+                      controller: _scannerController,
+                      onDetect: (capture) {
+                        final List<Barcode> barcodes = capture.barcodes;
+                        for (final barcode in barcodes) {
+                          if (barcode.rawValue != null) {
+                            _handleScannedBarcode(barcode.rawValue!);
+                            // Add a brief delay to prevent multiple scans
+                            _scannerController.stop();
+                            Future.delayed(const Duration(seconds: 2), () => _scannerController.start());
+                          }
+                        }
+                      },
                     ),
                   
                   if (_isCameraActive)
@@ -487,7 +607,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                           child: Container(
                             height: 2,
                             decoration: BoxDecoration(
-                              color: _cyanNeon,
+                              color: _cyanNeon.withOpacity(0.5),
                               boxShadow: [BoxShadow(color: _cyanNeon, blurRadius: 10, spreadRadius: 3)],
                             ),
                           ),
@@ -505,13 +625,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
               _buildControlBtn(
                 _isCameraActive ? Icons.videocam_off_rounded : Icons.videocam_rounded, 
                 _isCameraActive ? _limeNeon : _cyanNeon, 
-                () => setState(() => _isCameraActive = !_isCameraActive)
+                () async {
+                  if (_isCameraActive) {
+                    await _scannerController.stop();
+                    setState(() => _isCameraActive = false);
+                  } else {
+                    setState(() => _isCameraActive = true);
+                    await _scannerController.start();
+                  }
+                }
               ),
               const SizedBox(width: 24),
               _buildControlBtn(
                 Icons.flashlight_on_rounded, 
                 _isFlashlightOn ? _limeNeon : Colors.white24, 
-                _isCameraActive ? () => setState(() => _isFlashlightOn = !_isFlashlightOn) : null
+                _isCameraActive ? () async {
+                  await _scannerController.toggleTorch();
+                  setState(() => _isFlashlightOn = !_isFlashlightOn);
+                } : null
               ),
               const SizedBox(width: 24),
               _buildControlBtn(Icons.add_rounded, _cyanNeon, _searchAndAddProduct),
@@ -555,6 +686,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
       itemCount: _cartItems.length,
       itemBuilder: (context, index) {
         final item = _cartItems[index];
+        final bool isEditing = _editingIndex == index;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12.0),
           child: Slidable(
@@ -564,7 +696,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
               children: [
                 const SizedBox(width: 8),
                 CustomSlidableAction(
-                  onPressed: (_) => setState(() => _cartItems.removeAt(index)),
+                  onPressed: (_) {
+                    setState(() {
+                      _cartItems.removeAt(index);
+                      if (_editingIndex == index) _editingIndex = null;
+                      else if (_editingIndex != null && _editingIndex! > index) _editingIndex = _editingIndex! - 1;
+                    });
+                  },
                   backgroundColor: const Color(0xFFFF2D55).withOpacity(0.1),
                   foregroundColor: const Color(0xFFFF2D55),
                   borderRadius: BorderRadius.circular(15),
@@ -572,29 +710,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                 ),
               ],
             ),
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
-                    child: const Icon(Icons.shopping_bag_rounded, color: Colors.white24, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item['name'], style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
-                        Text('CANT: ${item['qty']}', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900)),
-                      ],
+            child: GestureDetector(
+              onTap: () => setState(() => _editingIndex = index),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                borderColor: isEditing ? _cyanNeon.withOpacity(0.5) : null,
+                borderWidth: isEditing ? 2 : null,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: isEditing ? _cyanNeon.withOpacity(0.1) : Colors.black45,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isEditing ? _cyanNeon.withOpacity(0.3) : Colors.white12),
+                      ),
+                      child: Icon(Icons.shopping_bag_rounded, color: isEditing ? _cyanNeon : Colors.white24, size: 20),
                     ),
-                  ),
-                  Text('\$${(item['price'] * item['qty']).toStringAsFixed(2)}', 
-                    style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, color: _limeNeon)
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item['name'], style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+                          Row(
+                            children: [
+                              Text('CANT: ', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900)),
+                              Text('${item['qty']}', style: GoogleFonts.spaceGrotesk(color: isEditing ? _cyanNeon : Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+                              if (isEditing) 
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Text('« EDITANDO', style: GoogleFonts.spaceGrotesk(color: _cyanNeon.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text('COP ${(item['price'] * item['qty']).toStringAsFixed(0)}', 
+                      style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w900, color: isEditing ? _cyanNeon : _limeNeon)
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -616,7 +773,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
             mainAxisAlignment: MainAxisAlignment.spaceBetween, 
             children: [
               Text('IMPUESTOS (7%)', style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0)), 
-              Text('\$${_tax.toStringAsFixed(2)}', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w900))
+              Text('COP ${_tax.toStringAsFixed(0)}', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w900))
             ]
           ),
           const SizedBox(height: 8),
@@ -624,7 +781,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('TOTAL', style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
-              Text('\$${_total.toStringAsFixed(2)}', 
+              Text('COP ${_total.toStringAsFixed(0)}', 
                 style: GoogleFonts.orbitron(
                   fontSize: 28, 
                   fontWeight: FontWeight.w900, 
@@ -670,12 +827,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
                     _buildPaymentOption('CASH', Icons.payments_rounded, _limeNeon),
                     const SizedBox(height: 8),
                     _buildPaymentOption('CARD', Icons.credit_card_rounded, _cyanNeon),
-                    const SizedBox(height: 8),
-                    _buildPaymentOption('NEQUI', Icons.phonelink_ring_rounded, _magentaNeon),
-                    const SizedBox(height: 8),
-                    _buildPaymentOption('BANCOLOMBIA', Icons.account_balance_rounded, const Color(0xFFFFD700)),
-                    const SizedBox(height: 8),
-                    _buildPaymentOption('ZELLE', Icons.wallet_rounded, const Color(0xFFB388FF)),
+                    ..._dynamicPayments.map((p) => Column(children: [
+                        const SizedBox(height: 8),
+                        _buildPaymentOption(p.bank, Icons.qr_code_scanner_rounded, 
+                          p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
+                          p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
+                          _limeNeon, 
+                          onTap: () => _showPaymentQR(p, 
+                            p.bank.toUpperCase().contains('NEQUI') ? _magentaNeon : 
+                            p.bank.toUpperCase().contains('BANCOLOMBIA') ? const Color(0xFFFFD700) : 
+                            _limeNeon
+                          )
+                        ),
+                    ])).toList(),
                   ],
                 ),
               ),
@@ -708,15 +872,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildPaymentOption(String id, IconData icon, Color color) {
+  Widget _buildPaymentOption(String id, IconData icon, Color color, {VoidCallback? onTap}) {
     bool isSelected = _selectedPayment == id;
     return GestureDetector(
-      onTap: () {
-        setState(() => _selectedPayment = id);
-        if (id == 'ZELLE') _showPaymentQR('ZELLE', const Color(0xFFB388FF));
-        if (id == 'NEQUI') _showPaymentQR('NEQUI', _magentaNeon);
-        if (id == 'BANCOLOMBIA') _showPaymentQR('BANCOLOMBIA', const Color(0xFFFFD700));
-      },
+      onTap: onTap ?? () => setState(() => _selectedPayment = id),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: 52,
@@ -754,7 +913,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> with TickerProviderStat
             child: Center(
               child: _isProcessing 
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
-                : Text('COBRAR \$${_total.toStringAsFixed(2)}', style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
+                : Text('COBRAR COP ${_total.toStringAsFixed(0)}', style: GoogleFonts.orbitron(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
             ),
           ),
         ),

@@ -38,33 +38,30 @@ class SalesService {
     }
   }
 
-  // CREATE - Create new sale (including items)
-  // Note: For atomic operations, an RPC call is recommended.
-  // This version does sequential inserts.
+  // CREATE - Create new sale (Atómico vía RPC)
   Future<void> createSale(Sale sale, List<SaleItem> items) async {
     try {
-      // 1. Insert and get Sale ID
-      final saleResponse = await _supabase
-          .from('ventas')
-          .insert(sale.toJson())
-          .select()
-          .single();
-      
-      final String saleId = saleResponse['id'];
-
-      // 2. Prepare and Insert Items
-      final itemsToInsert = items.map((item) {
-        final map = item.toJson();
-        map['id_venta'] = saleId;
-        return map;
-      }).toList();
-
-      await _supabase.from('ventas_items').insert(itemsToInsert);
-
-      // 3. Update stock for each product (Ideal via Trigger in DB)
-      // Here we assume a trigger in Supabase handles stock deduction.
+      // Usar la función RPC para garantizar atomicidad e integridad
+      await _supabase.rpc(
+        'process_sale_atomic',
+        params: {
+          'p_client_id': sale.clientId,
+          'p_subtotal': sale.subtotal,
+          'p_tax': sale.tax,
+          'p_total': sale.total,
+          'p_payment_method': sale.paymentMethod,
+          'p_notes': sale.notes,
+          'p_items': items.map((i) => {
+            'productId': i.productId,
+            'productName': i.productName,
+            'quantity': i.quantity,
+            'unitPrice': i.unitPrice,
+            'subtotal': i.subtotal,
+          }).toList(),
+        },
+      );
     } catch (e) {
-      print('Error creating sale: $e');
+      print('Error creating sale via RPC: $e');
       rethrow;
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../components/glass_card.dart';
 import 'edit_product_screen.dart';
 
@@ -230,8 +231,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildSmallKpi('COMPRA', '\$${p['purchasePrice'].toStringAsFixed(2)}', cyan),
-        _buildSmallKpi('VENTA', '\$${p['price'].toStringAsFixed(2)}', magenta),
+        _buildSmallKpi('COMPRA', 'COP ${NumberFormat('#,###', 'es_CO').format(p['purchasePrice'])}', cyan),
+        _buildSmallKpi('VENTA', 'COP ${NumberFormat('#,###', 'es_CO').format(p['price'])}', magenta),
         _buildSmallKpi('MARGEN', p['margin'], lime),
       ],
     );

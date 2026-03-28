@@ -1,17 +1,30 @@
-# pos_urena
+# Bodega Ureña - Sistema POS Móvil
 
-A new Flutter project.
+Sistema Móvil de Punto de Venta (POS) y Gestión de Inventario para Minimarket, desarrollado con Flutter y Supabase.
 
-## Getting Started
+## 🚀 Compilación del APK (Android)
 
-This project is a starting point for a Flutter application.
+Para generar una nueva versión del APK, sigue estos pasos:
 
-A few resources to get you started if this is your first Flutter project:
+1. **Incrementar la versión** en `pubspec.yaml` (ej. `version: 1.0.3+4`).
+2. **Abrir la terminal** en la raíz del proyecto.
+3. **Ejecutar el comando de limpieza** (opcional pero recomendado):
+   ```sh
+   flutter clean
+   flutter pub get
+   ```
+4. **Construir el APK**:
+   ```sh
+   flutter build apk --release
+   ```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+El archivo resultante estará en:
+`build/app/outputs/flutter-apk/app-release.apk`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🛠️ Tecnologías Principales
+- **Flutter**: Interfaz de usuario multiplataforma.
+- **Supabase**: Base de datos en tiempo real y autenticación.
+- **Mobile Scanner**: Escaneo de códigos de barras.
+- **Provider**: Gestión de estados.

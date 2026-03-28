@@ -19,35 +19,47 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
   final Color _limeNeon = const Color(0xFF8CFF00);
   final Color _cyanNeon = const Color(0xFF00FBFF);
   final Color _magentaNeon = const Color(0xFFFF00FF);
-
-  // Fake data for charts
-  final Map<int, double> _weeklyData = {
-    0: 1200, 1: 1800, 2: 1500, 3: 2000, 4: 1100, 5: 2500, 6: 3000
-  };
-
-  int _touchedBarIndex = -1;
-  int _selectedDayIndex = -1; // -1 means showing weekly total
-  int _touchedPieIndex = -1;
   bool _isLoading = false;
+  int _selectedDayIndex = -1;
 
+  // Dynamic Data Structures
   final List<String> _days = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+  final List<String> _months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  final List<String> _hours = List.generate(24, (i) => '${i}h');
 
-  // Mock daily KPI data
-  final Map<int, Map<String, dynamic>> _dailyKpis = {
-    0: {'revenue': 1200.0, 'benefit': '450', 'units': '28', 'return': '5%'},
-    1: {'revenue': 1800.0, 'benefit': '680', 'units': '45', 'return': '2%'},
-    2: {'revenue': 1500.0, 'benefit': '590', 'units': '32', 'return': '4%'},
-    3: {'revenue': 2000.0, 'benefit': '820', 'units': '52', 'return': '1%'},
-    4: {'revenue': 1100.0, 'benefit': '320', 'units': '20', 'return': '8%'},
-    5: {'revenue': 2500.0, 'benefit': '1100', 'units': '68', 'return': '3%'},
-    6: {'revenue': 3000.0, 'benefit': '1350', 'units': '84', 'return': '2%'},
-  };
+  // Improved Mock Data
+  late Map<int, double> _currentChartData;
+  late List<String> _currentLabels;
+
+  final Map<int, double> _weeklyData = {0: 1200, 1: 1800, 2: 1500, 3: 2000, 4: 1100, 5: 2500, 6: 3000};
+  final Map<int, double> _dailyData = {8: 200, 10: 450, 12: 800, 14: 600, 16: 1200, 18: 900, 20: 300}; // Segments by hour
+  final Map<int, double> _monthlyData = {0: 15000, 1: 18000, 2: 21000, 3: 16000, 4: 25000, 5: 32000, 6: 45000, 7: 38000, 8: 41000, 9: 48000, 10: 52000, 11: 55000};
+
+  @override
+  void initState() {
+    super.initState();
+    _currentChartData = _weeklyData;
+    _currentLabels = _days;
+  }
 
   void _onTimeRangeChanged(String newRange) async {
     if (_timeRange == newRange) return;
     setState(() {
       _timeRange = newRange;
       _isLoading = true;
+      _selectedDayIndex = -1; // Reset selection
+      
+      // Update dynamic data
+      if (newRange == 'DIARIO') {
+        _currentChartData = _dailyData;
+        _currentLabels = _hours;
+      } else if (newRange == 'SEMANAL') {
+        _currentChartData = _weeklyData;
+        _currentLabels = _days;
+      } else {
+        _currentChartData = _monthlyData;
+        _currentLabels = _months;
+      }
     });
     await Future.delayed(const Duration(milliseconds: 600));
     if (mounted) setState(() => _isLoading = false);
@@ -217,8 +229,24 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
     String displayLabel = 'INGRESOS SEMANALES';
     
     if (_selectedDayIndex != -1) {
-      totalRevenue = _dailyKpis[_selectedDayIndex]?['revenue'] ?? 0.0;
-      displayLabel = 'INGRESOS ${_days[_selectedDayIndex]}';
+      if (_timeRange == 'SEMANAL') {
+        totalRevenue = _weeklyData[_selectedDayIndex] ?? 0.0;
+        displayLabel = 'INGRESOS ${_days[_selectedDayIndex]}';
+      } else if (_timeRange == 'MENSUAL') {
+        totalRevenue = _monthlyData[_selectedDayIndex] ?? 0.0;
+        displayLabel = 'INGRESOS ${_months[_selectedDayIndex]}';
+      } else {
+        totalRevenue = _dailyData[_selectedDayIndex] ?? 0.0;
+        displayLabel = 'VENDIDO A LAS ${_hours[_selectedDayIndex]}';
+      }
+    } else {
+      if (_timeRange == 'MENSUAL') {
+        totalRevenue = 485000.0;
+        displayLabel = 'INGRESOS ANUALES TOTALES';
+      } else if (_timeRange == 'DIARIO') {
+        totalRevenue = 4450.0;
+        displayLabel = 'INGRESOS DEL DÍA';
+      }
     }
 
     return GlassCard(
@@ -310,12 +338,16 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 30,
+                      interval: _timeRange == 'DIARIO' ? 4 : 1, // Only show some hours to avoid clutter
                       getTitlesWidget: (value, meta) {
                         int index = value.toInt();
+                        if (index < 0 || index >= _currentLabels.length) return const SizedBox();
+                        
                         return Padding(
                           padding: const EdgeInsets.only(top: 12.0),
                           child: Text(
-                            _days[index],
+                            _currentLabels[index],
                             style: GoogleFonts.spaceGrotesk(
                               color: _selectedDayIndex == index ? _cyanNeon : Colors.white24, 
                               fontSize: 9, 
@@ -332,21 +364,22 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                 ),
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
-                barGroups: List.generate(7, (i) {
+                barGroups: List.generate(_currentLabels.length, (i) {
                   final isSelected = _selectedDayIndex == i;
-                  final color = isSelected ? _cyanNeon : ((i == 1 || i == 3 || i == 5) ? _magentaNeon : _cyanNeon.withOpacity(0.5));
+                  final double value = _currentChartData[i] ?? 0.0;
+                  final color = isSelected ? _cyanNeon : ((i % 3 == 0) ? _magentaNeon : _cyanNeon.withOpacity(0.5));
                   
                   return BarChartGroupData(
                     x: i,
                     barRods: [
                       BarChartRodData(
-                        toY: _weeklyData[i]!,
+                        toY: value,
                         color: color,
-                        width: 14,
+                        width: _timeRange == 'MENSUAL' ? 8 : (_timeRange == 'DIARIO' ? 4 : 14),
                         borderRadius: const BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
-                          toY: 4000,
+                          toY: _timeRange == 'MENSUAL' ? 60000 : 4000,
                           color: Colors.white.withOpacity(0.04),
                         ),
                       ),
@@ -370,13 +403,13 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
     String rGrowth = '-2%';
 
     if (_selectedDayIndex != -1) {
-      final data = _dailyKpis[_selectedDayIndex]!;
-      benefit = '\$${data['benefit']}';
-      units = data['units'];
-      returns = data['return'];
-      bGrowth = 'DÍA';
-      uGrowth = 'DÍA';
-      rGrowth = 'DÍA';
+      final double rev = _currentChartData[_selectedDayIndex] ?? 0.0;
+      benefit = '\$${(rev * 0.35).toStringAsFixed(0)}'; // Estimated 35% benefit
+      units = (rev / 15).toStringAsFixed(0); // Estimated units
+      returns = '${(rev % 5).toStringAsFixed(1)}%';
+      bGrowth = 'REF';
+      uGrowth = 'REF';
+      rGrowth = 'REF';
     }
 
     return Row(

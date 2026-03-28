@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import '../services/product_service.dart';
 import '../models/product.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  final String? initialBarcode;
+  const AddProductScreen({super.key, this.initialBarcode});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -20,6 +23,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   bool _isTrackingStock = true;
   bool _isLoading = false;
+  
+  // Image handling
+  final ImagePicker _picker = ImagePicker();
+  Uint8List? _imageBytes;
+  String? _imageUrl;
   
   // Controllers
   final TextEditingController _nameController = TextEditingController();
@@ -45,6 +53,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     super.initState();
     _loadCategories();
     _catController.text = 'General';
+    if (widget.initialBarcode != null) {
+      _skuController.text = widget.initialBarcode!;
+    }
     _nameFocus.addListener(() => setState(() {}));
     _catFocus.addListener(() => setState(() {}));
     _skuFocus.addListener(() => setState(() {}));
@@ -110,6 +121,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         category: _catController.text,
         barcode: _skuController.text,
         cost: costPrice,
+        imageUrl: _imageUrl,
       );
 
       await _productService.addProduct(product);
@@ -149,7 +161,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    _buildImageUpload(),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: _buildImageUpload(),
+                    ),
                     const SizedBox(height: 48),
                     _buildInputField('NOMBRE DEL PRODUCTO', 'ej. Cyber Energy Drink', _nameController, _nameFocus),
                     const SizedBox(height: 20),
@@ -159,9 +174,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: _buildInputField('COSTO', '\$ 0.00', _costController, _costFocus, isNumeric: true)),
+                        Expanded(child: _buildInputField('COSTO', 'COP 0.00', _costController, _costFocus, isNumeric: true)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildInputField('PRECIO VENTA', '\$ 0.00', _saleController, _saleFocus, isNumeric: true)),
+                        Expanded(child: _buildInputField('PRECIO VENTA', 'COP 0.00', _saleController, _saleFocus, isNumeric: true)),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -227,9 +242,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       FocusScope.of(context).unfocus();
                     },
                     fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                      // Workaround to sync with our external controller if needed
-                      // but Autocomplete usually manages its own.
-                      // For now, let's just make sure it starts with the right value.
                       if (textController.text.isEmpty && _catController.text.isNotEmpty) {
                         textController.text = _catController.text;
                       }
@@ -309,7 +321,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ),
           Text(
             'AÑADIR PRODUCTO',
-            style: GoogleFonts.orbitron( // More tech/cyber font for titles
+            style: GoogleFonts.orbitron(
               color: _limeNeon,
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -324,13 +336,50 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _isLoading = true;
+          _imageBytes = bytes;
+        });
+
+        final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final String? url = await _productService.uploadImage(bytes, fileName);
+        
+        setState(() {
+          _imageUrl = url;
+          _isLoading = false;
+        });
+
+        if (url != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Imagen subida correctamente')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al subir la imagen')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
   Widget _buildImageUpload() {
     return Center(
       child: Stack(
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          // Circular shadow for glow
           Container(
             width: 150,
             height: 150,
@@ -341,7 +390,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ],
             ),
           ),
-          // Dashed Circle Painter
           SizedBox(
             width: 140,
             height: 140,
@@ -349,24 +397,30 @@ class _AddProductScreenState extends State<AddProductScreen> {
               painter: DashedCirclePainter(color: _cyanNeon),
             ),
           ),
-          // Content
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.camera_alt_rounded, color: _cyanNeon, size: 42),
-              const SizedBox(height: 10),
-              Text(
-                'SUBIR IMAGEN',
-                style: GoogleFonts.spaceGrotesk(
-                  color: _cyanNeon,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5
-                ),
-              ),
-            ],
+          ClipOval(
+            child: SizedBox(
+              width: 130,
+              height: 130,
+              child: _imageBytes != null 
+                ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.camera_alt_rounded, color: _cyanNeon, size: 42),
+                      const SizedBox(height: 10),
+                      Text(
+                        'SUBIR IMAGEN',
+                        style: GoogleFonts.spaceGrotesk(
+                          color: _cyanNeon,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5
+                        ),
+                      ),
+                    ],
+                  ),
+            ),
           ),
-          // Plus button
           Positioned(
             bottom: 2,
             right: 2,
@@ -524,7 +578,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 }
-
 
 class DashedCirclePainter extends CustomPainter {
   final Color color;
