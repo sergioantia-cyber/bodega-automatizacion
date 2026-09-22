@@ -58,6 +58,7 @@ interface CustomerCheckoutModalProps {
   onClose: () => void;
   onOrderCompleted: (order: CustomerOrder) => void;
   storeProfile?: StoreProfile;
+  onOpenTerms?: () => void;
 }
 
 export const CustomerCheckoutModal: React.FC<CustomerCheckoutModalProps> = ({
@@ -66,7 +67,8 @@ export const CustomerCheckoutModal: React.FC<CustomerCheckoutModalProps> = ({
   totalPrice,
   onClose,
   onOrderCompleted,
-  storeProfile: propStoreProfile
+  storeProfile: propStoreProfile,
+  onOpenTerms
 }) => {
   const [internalProfile, setInternalProfile] = useState<StoreProfile>(() =>
     propStoreProfile || storageService.getStoreProfile()
@@ -875,6 +877,19 @@ export const CustomerCheckoutModal: React.FC<CustomerCheckoutModalProps> = ({
                         {isDeliv ? 'Enviar Pedido con Delivery 🛵' : 'Enviar Pedido para Retiro en Tienda 🏪'}
                       </span>
                     </TactileButton>
+
+                    {onOpenTerms && (
+                      <p className="text-center text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                        Al pedir confirmas los{' '}
+                        <button
+                          type="button"
+                          onClick={onOpenTerms}
+                          className="underline font-bold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white"
+                        >
+                          Términos del Servicio y Despacho GPS
+                        </button>
+                      </p>
+                    )}
 
                     <div className="space-y-1 mt-2">
                       {!hasPaymentMethod && (

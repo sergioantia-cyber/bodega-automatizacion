@@ -18,6 +18,7 @@ import { BrandCustomizerModal } from './components/BrandCustomizerModal';
 import { PaymentMethodsConfigModal } from './components/PaymentMethodsConfigModal';
 import { AdminPinModal } from './components/AdminPinModal';
 import { StoreShareModal } from './components/StoreShareModal';
+import { TermsAndConditionsModal } from './components/TermsAndConditionsModal';
 import { TactileCard } from './components/ui/TactileCard';
 import { TactileButton } from './components/ui/TactileButton';
 import { VoiceSearchButton } from './components/VoiceSearchButton';
@@ -54,6 +55,7 @@ export function App() {
   const [isBrandCustomizerOpen, setIsBrandCustomizerOpen] = useState<boolean>(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState<boolean>(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState<boolean>(false);
   const [storeProfile, setStoreProfile] = useState(() => storageService.getStoreProfile());
   const [isDark, setIsDark] = useState<boolean>(() => storageService.getTheme() === 'dark');
 
@@ -824,7 +826,7 @@ export function App() {
           </div>
         )}
 
-        {/* Footer info & Términos y condiciones con acceso oculto */}
+        {/* Footer info & Términos y condiciones con acceso legal y acceso oculto */}
         <footer className="text-center py-4 text-slate-500 dark:text-slate-400 text-xs font-medium space-y-1">
           <div className="flex items-center justify-center gap-1.5 font-bold">
             <span>{storeProfile.name}</span>
@@ -833,15 +835,22 @@ export function App() {
             <span>•</span>
             <Heart className="w-3.5 h-3.5 text-bogad-coral fill-bogad-coral inline" />
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 select-none">
-            <span>Términos y </span>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            <button
+              type="button"
+              onClick={() => setIsTermsModalOpen(true)}
+              className="underline hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer font-semibold"
+            >
+              Términos y condiciones legales
+            </button>
+            <span> • </span>
             <span
               onClick={handleSecretCondicionesClick}
-              className="cursor-default select-none"
+              className="cursor-default select-none hover:text-slate-600 transition-colors"
+              title="Acceso administrativo"
             >
-              condiciones
+              © {new Date().getFullYear()} {storeProfile.name}
             </span>
-            <span> • © {new Date().getFullYear()} Todos los derechos reservados</span>
           </p>
         </footer>
       </main>
@@ -882,6 +891,7 @@ export function App() {
         items={items}
         totalPrice={totalPrice}
         storeProfile={storeProfile}
+        onOpenTerms={() => setIsTermsModalOpen(true)}
         onClose={() => setIsCheckoutModalOpen(false)}
         onOrderCompleted={(newOrder) => {
           const updatedProducts = storageService.decrementStock(newOrder.items);
@@ -927,6 +937,13 @@ export function App() {
         onClose={() => setShowQRModal(false)}
         storeProfile={storeProfile}
         onProfileUpdated={(updated) => setStoreProfile(updated)}
+      />
+
+      {/* MODAL DE TÉRMINOS Y CONDICIONES LEGALES */}
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+        storeProfile={storeProfile}
       />
 
       {/* BANNER / MODAL DE INSTALACIÓN PWA */}
