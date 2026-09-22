@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: bodega-jl
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VITE_STORE_SLUG
+        value: bodega-jl
+      - key: VITE_BODEGA_NAME
+        value: "Bodega  JL"
+      - key: VITE_BODEGA_WHATSAPP
+        value: "57312228403"
+      - key: VITE_BODEGA_PHONE_DISPLAY
+        value: "57312228403"
+      - key: VITE_BODEGA_ADDRESS
+        value: "Aguas calientes calle 3"
+      - key: VITE_CATALOG_URL
+        value: https://bodega-jl.onrender.com
+      - key: VITE_BODEGA_DELIVERY_FEE
+        value: "6.00"
+      - key: VITE_SUPABASE_URL
+        value: https://itmplwgbmpnxglrtcuut.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: sb_publishable_ntHIAaPZjVDu7uedxJkG_g_OzbUCxWi

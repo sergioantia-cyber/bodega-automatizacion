@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#FFE600" />
+  <!-- Tactile shadow shape inside -->
+  <rect x="108" y="108" width="312" height="312" rx="48" fill="#0F172A" />
+  <rect x="96" y="96" width="312" height="312" rx="48" fill="#FFFFFF" stroke="#0F172A" stroke-width="20" />
+  <!-- Store awning / Bag icon -->
+  <path d="M176 190 V150 A80 80 0 0 1 336 150 V190" fill="none" stroke="#0F172A" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Letter B for Bogad or Cart outline -->
+  <path d="M190 240 H322 L302 340 H210 Z" fill="#D2FF00" stroke="#0F172A" stroke-width="20" stroke-linejoin="round" />
+  <!-- Accent bolt/star -->
+  <circle cx="256" cy="290" r="16" fill="#FF5C38" stroke="#0F172A" stroke-width="6" />
+</svg>

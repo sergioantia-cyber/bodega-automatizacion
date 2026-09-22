@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Eliminar Service Workers residuales y vaciar CacheStorage inmediatamente
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) {
+            regs[i].unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var j = 0; j < keys.length; j++) {
+            caches.delete(keys[j]);
+          }
+        });
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA & Mobile Meta Tags -->
+    <title>Bogad - Tu Bodega Digital</title>
+    <meta name="description" content="PWA ultraligera y táctil para pedidos y compras de bodega en tu vecindario." />
+    <meta name="theme-color" content="#FFE600" />
+    
+    <!-- iOS Safari PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Bogad" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.svg" />
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileColor" content="#FFE600" />
+
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-bogad-light dark:bg-bogad-dark text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-bogad-yellow selection:text-slate-900 select-none overflow-x-hidden min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
